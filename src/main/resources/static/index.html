@@ -1,13 +1,337 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>周末活动规划助手</title>
-    <script type="module" crossorigin src="/assets/index-Cp9AsvsJ.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-B-M6ukxY.css">
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>周末活动规划助手</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+:root {
+  --blue: #1677ff;
+  --blue-light: #e6f4ff;
+  --green: #52c41a;
+  --green-light: #f6ffed;
+  --green-border: #b7eb8f;
+  --gold: #faad14;
+  --gold-light: #fffbe6;
+  --gold-border: #ffe58f;
+  --red: #ff4d4f;
+  --red-light: #fff2f0;
+  --red-border: #ffccc7;
+  --gray: #8c8c8c;
+  --gray-light: #fafafa;
+  --border: #f0f0f0;
+  --text: #1f1f1f;
+  --text-secondary: #666;
+  --radius: 8px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: #f5f5f5; height: 100vh; display: flex; justify-content: center;
+}
+
+/* ── Layout ── */
+#app {
+  width: 100%; max-width: 960px; height: 100vh; display: flex; background: #fff;
+}
+#sidebar {
+  width: 240px; background: #fafafa; border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; flex-shrink: 0;
+}
+#sidebar h3 { padding: 18px 16px 12px; font-size: 15px; font-weight: 600; }
+#sidebar .btn-new {
+  margin: 0 12px 12px; padding: 8px 0; background: var(--blue); color: #fff;
+  border: none; border-radius: 6px; font-size: 13px; cursor: pointer;
+}
+#sidebar .convos { flex:1; overflow-y:auto; padding: 0 8px; }
+#sidebar .convo {
+  padding: 10px 12px; margin: 2px 0; border-radius: 6px; cursor: pointer;
+  font-size: 13px; color: var(--text-secondary); transition: background 0.15s;
+  display: flex; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#sidebar .convo:hover { background: #f0f0f0; }
+#sidebar .convo.active { background: var(--blue-light); color: var(--blue); font-weight: 500; }
+#main { flex:1; display:flex; flex-direction:column; min-width:0; }
+#messages { flex:1; overflow-y:auto; padding: 20px 24px; }
+#messages:empty::after {
+  content: "✨ 输入你想安排的活动，AI 助手为你规划完整方案";
+  display: flex; align-items: center; justify-content: center; height: 100%;
+  color: #bbb; font-size: 15px;
+}
+
+/* ── Status bar ── */
+#status {
+  padding: 6px 24px; font-size: 12px; color: var(--text-secondary);
+  display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--border);
+}
+.dot { width: 7px; height: 7px; border-radius: 50%; }
+.dot.online { background: var(--green); }
+.dot.thinking { background: var(--gold); animation: blink 1s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ── Messages ── */
+.msg { margin-bottom: 18px; animation: fadeIn 0.2s ease; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+
+/* User bubble */
+.msg-user { display: flex; justify-content: flex-end; }
+.msg-user .bubble {
+  background: var(--blue); color: #fff; padding: 10px 16px; border-radius: 16px 16px 4px 16px;
+  max-width: 70%; line-height: 1.5; font-size: 14px; word-break: break-word;
+}
+
+/* ── ThoughtChain ── */
+.thought-chain { padding: 4px 0; }
+.tc-item { display: flex; gap: 12px; padding: 6px 0; }
+.tc-item:last-child { padding-bottom: 0; }
+.tc-icon {
+  width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 15px; flex-shrink: 0; position: relative; z-index: 1;
+}
+.tc-item:not(:last-child) .tc-icon::after {
+  content: ''; position: absolute; top: 32px; left: 50%; transform: translateX(-50%);
+  width: 2px; height: calc(100% + 6px); background: #e8e8e8;
+}
+.tc-icon.thought { background: #fff7e6; color: var(--gold); }
+.tc-icon.action { background: var(--blue-light); color: var(--blue); }
+.tc-icon.obs { background: var(--green-light); color: var(--green); }
+.tc-body { flex:1; min-width:0; }
+.tc-title { font-size: 12px; color: var(--text-secondary); margin-bottom: 2px; }
+.tc-content { font-size: 14px; line-height: 1.6; color: var(--text); word-break: break-word; }
+.tc-content.thought-text { color: var(--text-secondary); font-style: italic; }
+.tc-tool {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--blue-light); border: 1px solid #91caff; border-radius: 4px;
+  padding: 2px 10px; font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+  font-size: 13px; color: var(--blue);
+}
+.tc-obs {
+  background: var(--green-light); border: 1px solid var(--green-border);
+  border-radius: 6px; padding: 6px 10px; max-height: 160px; overflow-y: auto;
+  white-space: pre-wrap; font-family: "SF Mono", monospace; font-size: 12px; color: #389e0d;
+}
+
+/* ── Plan card ── */
+.plan-card {
+  background: var(--gold-light); border: 1px solid var(--gold-border);
+  border-radius: 10px; padding: 18px 20px; margin: 8px 0;
+  line-height: 1.7; font-size: 14px;
+}
+.plan-card h1,.plan-card h2,.plan-card h3 { margin: 10px 0 6px; font-size: 15px; }
+.plan-card p { margin: 4px 0; }
+.plan-card ul,.plan-card ol { padding-left: 20px; margin: 6px 0; }
+.plan-card code { background: rgba(0,0,0,0.05); padding: 2px 5px; border-radius: 4px; font-size: 13px; }
+.plan-card pre { background: rgba(0,0,0,0.03); padding: 10px; border-radius: 8px; overflow-x: auto; margin: 8px 0; }
+.plan-card table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 13px; }
+.plan-card th,.plan-card td { border: 1px solid #e8d5a0; padding: 8px 12px; text-align: left; }
+.plan-card th { background: #fff3cd; }
+.plan-card blockquote { border-left: 3px solid var(--gold-border); padding-left: 12px; color: #888; margin: 8px 0; }
+.plan-card hr { border: none; border-top: 1px solid #f0e0a0; margin: 12px 0; }
+.plan-actions { display: flex; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #f0e0a0; }
+.plan-actions button {
+  padding: 7px 18px; border-radius: 6px; cursor: pointer; border: none; font-size: 14px; font-weight: 500;
+}
+.btn-confirm { background: var(--blue); color: #fff; }
+.btn-confirm:hover { opacity: 0.85; }
+.btn-adjust { background: #fff; color: var(--text); border: 1px solid #d9d9d9 !important; }
+.btn-adjust:hover { border-color: var(--blue) !important; color: var(--blue); }
+
+/* Done / Error */
+.done-msg, .error-msg { padding: 12px 16px; border-radius: 8px; font-size: 14px; margin: 8px 0; }
+.done-msg { background: var(--green-light); border: 1px solid var(--green-border); text-align: center; }
+.error-msg { background: var(--red-light); border: 1px solid var(--red-border); color: var(--red); }
+
+/* ── Input ── */
+#input-area {
+  padding: 14px 24px; border-top: 1px solid var(--border);
+  display: flex; gap: 10px; background: #fff;
+}
+#input-area input {
+  flex: 1; padding: 10px 16px; border: 1px solid #d9d9d9; border-radius: 8px;
+  font-size: 14px; outline: none; transition: border-color 0.2s;
+}
+#input-area input:focus { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(22,119,255,0.1); }
+#input-area button {
+  padding: 10px 22px; background: var(--blue); color: #fff; border: none;
+  border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer;
+}
+#input-area button:hover { opacity: 0.85; }
+#input-area button:disabled { background: #91caff; cursor: not-allowed; }
+
+@media (max-width: 640px) {
+  #sidebar { display: none; }
+  #messages { padding: 14px 16px; }
+  #input-area { padding: 10px 16px; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <h3>🤖 活动规划助手</h3>
+    <button class="btn-new" onclick="location.reload()">+ 新对话</button>
+    <div class="convos" id="convoList"></div>
+  </div>
+
+  <!-- Main -->
+  <div id="main">
+    <div id="status"><span class="dot online"></span> 就绪</div>
+    <div id="messages"></div>
+    <div id="input-area">
+      <input type="text" id="userInput" placeholder="输入你想安排的活动..." autofocus>
+      <button id="sendBtn" onclick="sendMessage()">发送</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let ws, planning = false, roundBuf = [];
+
+marked.setOptions({ breaks: true, gfm: true });
+
+function connect() {
+  ws = new WebSocket('ws://' + location.host + '/ws/chat');
+  ws.onmessage = e => render(JSON.parse(e.data));
+  ws.onclose = () => { planning = false; setStatus('offline'); };
+  ws.onerror = () => { planning = false; setStatus('offline'); };
+}
+
+function setStatus(s) {
+  const m = { online:'就绪', thinking:'Agent 思考中...', offline:'连接断开' };
+  document.getElementById('status').innerHTML = '<span class="dot '+s+'"></span> '+m[s];
+}
+
+function sendMessage() {
+  const input = document.getElementById('userInput'), text = input.value.trim();
+  if (!text || planning) return;
+  planning = true;
+  document.getElementById('sendBtn').disabled = true;
+  setStatus('thinking');
+  addUserMsg(text);
+  addToSidebar(text);
+  input.value = '';
+  ws.send(JSON.stringify({ content: text }));
+}
+
+function render(step) {
+  switch (step.type) {
+    case 'THOUGHT': roundBuf = []; fallthrough(step); break;
+    case 'ACTION': case 'OBSERVATION': roundBuf.push(step);
+      if (step.type === 'OBSERVATION') { addThoughtChain(roundBuf); roundBuf = []; }
+      break;
+    case 'FINAL_PLAN': addPlanCard(step.content); break;
+    case 'CONFIRMING': addConfirming(step.content); break;
+    case 'DONE': addDone(step.content); break;
+    case 'ERROR': addError(step.content); break;
+  }
+  document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+}
+
+function fallthrough(step) {
+  // Add the THOUGHT as first item
+}
+
+// ── Renderers ──
+
+function addUserMsg(text) {
+  const d = ce('div', 'msg msg-user');
+  d.innerHTML = '<div class="bubble">'+esc(text)+'</div>';
+  document.getElementById('messages').appendChild(d);
+}
+
+function addThoughtChain(steps) {
+  const d = ce('div', 'msg thought-chain');
+  let html = '';
+  steps.forEach((s, i) => {
+    if (s.type === 'THOUGHT') {
+      html += tcItem('thought', '💡', '思考', '<span class="tc-content thought-text">'+esc(s.content)+'</span>');
+    } else if (s.type === 'ACTION') {
+      const params = s.params ? trunc(esc(s.params), 80) : '';
+      html += tcItem('action', '🔧', '调用工具', '<span class="tc-tool">'+esc(s.tool)+'</span> '+params);
+    } else if (s.type === 'OBSERVATION') {
+      html += tcItem('obs', '👁️', '返回结果', '<div class="tc-obs">'+esc(fmtJson(s.content))+'</div>');
+    }
+  });
+  d.innerHTML = html;
+  document.getElementById('messages').appendChild(d);
+}
+
+function tcItem(cls, icon, title, content) {
+  return '<div class="tc-item"><div class="tc-icon '+cls+'">'+icon+'</div><div class="tc-body"><div class="tc-title">'+title+'</div>'+content+'</div></div>';
+}
+
+function addPlanCard(content) {
+  const d = ce('div', 'msg');
+  const html = marked.parse(content);
+  d.innerHTML = '<div class="plan-card"><div class="plan-content">'+html+'</div>'+
+    '<div class="plan-actions">'+
+    '<button class="btn-confirm" onclick="confirmPlan()">✓ 确认方案</button>'+
+    '<button class="btn-adjust" onclick="adjustPlan()">↩ 调整方案</button>'+
+    '</div></div>';
+  document.getElementById('messages').appendChild(d);
+  endPlanning();
+}
+
+function addConfirming(text) {
+  document.getElementById('messages').appendChild(ceMsg('', '⏳ '+text, 'color:#faad14;font-size:13px;padding:6px 0'));
+}
+
+function addDone(text) {
+  const d = ce('div', 'msg');
+  d.innerHTML = '<div class="done-msg">🎉 '+esc(text)+'</div>';
+  document.getElementById('messages').appendChild(d);
+  endPlanning();
+}
+
+function addError(text) {
+  const d = ce('div', 'msg');
+  d.innerHTML = '<div class="error-msg">❌ '+esc(text)+'</div>';
+  document.getElementById('messages').appendChild(d);
+  endPlanning();
+}
+
+function endPlanning() {
+  planning = false;
+  document.getElementById('sendBtn').disabled = false;
+  setStatus('online');
+}
+
+function confirmPlan() {
+  ws.send(JSON.stringify({ type:'confirm', content:'确认执行此方案' }));
+  planning = true;
+  document.getElementById('sendBtn').disabled = true;
+  setStatus('thinking');
+}
+
+function adjustPlan() {
+  const el = document.getElementById('userInput');
+  el.value = '请调整方案：'; el.focus();
+}
+
+function addToSidebar(title) {
+  const list = document.getElementById('convoList');
+  const div = document.createElement('div');
+  div.className = 'convo active';
+  div.textContent = trunc(title, 18);
+  list.querySelectorAll('.convo').forEach(c => c.classList.remove('active'));
+  list.insertBefore(div, list.firstChild);
+}
+
+// ── Helpers ──
+
+function ce(tag, cls) { const e = document.createElement(tag); if(cls) e.className = cls; return e; }
+function ceMsg(cls, html, style) {
+  const d = document.createElement('div'); d.className = 'msg '+cls;
+  d.innerHTML = style ? '<div style="'+style+'">'+html+'</div>' : html; return d;
+}
+function esc(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
+function trunc(s, n) { return s&&s.length>n ? s.slice(0,n)+'...' : s||''; }
+function fmtJson(s) { try{ return JSON.stringify(JSON.parse(s),null,2); }catch(e){ return s; } }
+
+document.getElementById('userInput').addEventListener('keydown', e => { if(e.key==='Enter') sendMessage(); });
+connect();
+</script>
+</body>
 </html>
