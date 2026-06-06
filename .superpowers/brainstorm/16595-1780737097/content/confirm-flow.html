@@ -1,0 +1,71 @@
+<h2>AgentLoop.confirm() 流程重构</h2>
+<p class="subtitle">现有计划中 while 循环的三分支行为</p>
+
+<div class="mockup">
+  <div class="mockup-header">计划中的 confirm() 流程</div>
+  <div class="mockup-body" style="font-size:12px;line-height:1.5">
+    <div style="display:flex;gap:12px">
+      <div style="flex:1;text-align:center;padding:8px;background:#0f3460;border-radius:4px;color:#7ec8e3">
+        <strong>LLM 调用</strong><br>
+        <span style="font-size:10px">生成 ToolCall 列表</span>
+      </div>
+      <div style="flex:1;text-align:center;padding:8px;background:#0f3460;border-radius:4px;color:#7ec8e3">
+        <strong>逐条执行 Tool</strong><br>
+        <span style="font-size:10px">toolRegistry.execute()</span>
+      </div>
+      <div style="flex:1;text-align:center;padding:8px;background:#0f3460;border-radius:4px;color:#7ec8e3">
+        <strong>ReplanningHandler.analyze()</strong><br>
+        <span style="font-size:10px">判断 FailureType</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px;margin-top:10px">
+      <div style="flex:1;text-align:center;padding:10px;background:#1e3a2f;border-radius:4px;color:#53d8a0;font-size:11px">
+        <strong>✅ SUCCESS</strong><br>
+        继续下一条 Tool
+      </div>
+      <div style="flex:1;text-align:center;padding:10px;background:#3a2a1e;border-radius:4px;color:#e2c044;font-size:11px">
+        <strong>⏳ LONG_WAIT</strong><br>
+        sink.next(NOTIFY)<br>
+        sink.complete() ← 终止<br>
+        <span style="color:#ff6b6b">剩余 Tool 未执行!</span>
+      </div>
+      <div style="flex:1;text-align:center;padding:10px;background:#2a1a1a;border-radius:4px;color:#ff6b6b;font-size:11px">
+        <strong>❌ FAILED</strong><br>
+        replanCount++<br>
+        break → while 重新调 LLM
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:20px">
+  <h3>核心问题：LONG_WAIT 后的状态恢复</h3>
+  <p class="subtitle">用户对 NOTIFY 做出选择后，如何继续执行剩余的工具？</p>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>方案 A: confirm() 支持 "暂停-恢复"</h3>
+      <p>LONG_WAIT 时不调用 sink.complete()，而是暂停等待。用户在 WebSocket 同一会话中回复 "accept" 或 "replace"，AgentLoop 从暂停点恢复执行剩余 Tool。</p>
+      <p style="color:#888;font-size:12px">✅ 状态不丢失 &nbsp; ⚠️ 需要暂停机制（Project Reactor 的 Flux.create 不原生支持"等待外部事件后继续"）</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>方案 B: confirm() 终止，replan() 接管全部后续</h3>
+      <p>LONG_WAIT 时 confirm() 结束并记录"未完成列表"。用户回复后，replan() 从断点继续执行剩余 Tool（accept）或替换后执行（replace）。</p>
+      <p style="color:#888;font-size:12px">✅ 流程清晰 &nbsp; ⚠️ SessionContext 需要记录 "待执行 Tool 列表"</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>方案 C: 不暂停，NOTIFY 仅作信息提示</h3>
+      <p>LONG_WAIT 时发送 NOTIFY 但不停下——继续执行后续 Tool。最后汇总所有 NOTIFY 给用户一次性决策。适合 <strong>所有预订都执行完再统一调整</strong> 的模式。</p>
+      <p style="color:#888;font-size:12px">✅ 实现最简单 &nbsp; ⚠️ 用户可能不需要等待的通知项的上下文来决策</p>
+    </div>
+  </div>
+</div>

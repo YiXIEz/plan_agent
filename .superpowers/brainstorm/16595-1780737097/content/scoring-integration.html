@@ -1,0 +1,88 @@
+<h2>ScoringEngine 集成点选择</h2>
+<p class="subtitle">MockDataStore 不排序后，排名逻辑放在哪里？</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">方案 B1: 在搜索 Tool 中排序</div>
+    <div class="mockup-body" style="font-size:12px;line-height:1.5">
+      <div style="background:#0f3460;border-radius:4px;padding:8px;margin-bottom:6px;color:#7ec8e3">
+        <strong>AgentLoop</strong><br>
+        <span style="font-size:10px;color:#888">调用 toolRegistry.execute(req)</span>
+      </div>
+      <div style="text-align:center;color:#555">▼</div>
+      <div style="background:#16213e;border-radius:4px;padding:8px;margin-bottom:6px;color:#e2c044">
+        <strong>ToolRegistry</strong><br>
+        <span style="font-size:10px;color:#888">dispatch 到具体 Tool</span>
+      </div>
+      <div style="text-align:center;color:#555">▼</div>
+      <div style="background:#1e3a2f;border-radius:4px;padding:8px;margin-bottom:6px;color:#53d8a0">
+        <strong>🆕 RestaurantSearchTool</strong><br>
+        <span style="font-size:10px">① 调 MockDataStore.search() → 过滤列表</span><br>
+        <span style="font-size:10px">② 调 scoringEngine.rank() → 排序</span><br>
+        <span style="font-size:10px">③ 返回排序后 JSON</span>
+      </div>
+      <div style="text-align:center;color:#555">▼</div>
+      <div style="background:#1a1a2e;border-radius:4px;padding:6px;color:#c9c9c9;font-size:10px">
+        <strong>MockDataStore</strong> — 纯过滤，不排序
+      </div>
+      <div style="margin-top:8px;padding:6px;background:#2a1a1a;border-radius:4px;font-size:10px;color:#ff6b6b">
+        <strong>⚡ 问题：Tool 没有 SessionContext</strong><br>
+        需要修改 Tool 接口传入场景信息
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">方案 B2: 在 AgentLoop 中排序</div>
+    <div class="mockup-body" style="font-size:12px;line-height:1.5">
+      <div style="background:#0f3460;border-radius:4px;padding:8px;margin-bottom:6px;color:#7ec8e3">
+        <strong>AgentLoop</strong><br>
+        <span style="font-size:10px">① 调 toolRegistry.execute(req) → 原始 JSON</span><br>
+        <span style="font-size:10px;color:#53d8a0">② 检测是搜索类 Tool → 调 scoringEngine.rankJson()</span><br>
+        <span style="font-size:10px">③ 排序后 JSON → 喂给 LLM</span>
+      </div>
+      <div style="text-align:center;color:#555">▼</div>
+      <div style="background:#16213e;border-radius:4px;padding:8px;margin-bottom:6px;color:#e2c044">
+        <strong>ToolRegistry</strong><br>
+        <span style="font-size:10px;color:#888">dispatch（不变）</span>
+      </div>
+      <div style="text-align:center;color:#555">▼</div>
+      <div style="background:#1a1a2e;border-radius:4px;padding:6px;color:#c9c9c9;font-size:10px">
+        <strong>MockDataStore</strong> — 纯过滤，不排序
+      </div>
+      <div style="margin-top:8px;padding:6px;background:#2a1a1a;border-radius:4px;font-size:10px;color:#ff6b6b">
+        <strong>⚡ 问题：AgentLoop 需要解析 Tool JSON</strong><br>
+        AgentLoop 耦合了搜索结果的数据结构
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:16px">
+  <h3>还有第三个选择</h3>
+</div>
+
+<div class="mockup">
+  <div class="mockup-header">方案 B3: ScoringEngine 通过 ToolRegistry 注入，在 Tool 层使用 ThreadLocal SessionContext</div>
+  <div class="mockup-body" style="font-size:12px;line-height:1.5">
+    <div style="display:flex;gap:8px">
+      <div style="flex:1;background:#1e3a2f;border-radius:4px;padding:8px;color:#53d8a0;font-size:10px">
+        ToolRegistry.execute() 调用前<br>
+        <code>SessionContextHolder.set(ctx)</code>
+      </div>
+      <div style="flex:1;background:#1e3a2f;border-radius:4px;padding:8px;color:#53d8a0;font-size:10px">
+        SearchTool 内部<br>
+        <code>SessionContext ctx = SessionContextHolder.get()</code><br>
+        调 MockDataStore.search() → 调 ScoringEngine.rank()
+      </div>
+      <div style="flex:1;background:#1e3a2f;border-radius:4px;padding:8px;color:#53d8a0;font-size:10px">
+        ToolRegistry.execute() 返回后<br>
+        <code>SessionContextHolder.clear()</code>
+      </div>
+    </div>
+    <div style="margin-top:6px;font-size:10px;color:#888">
+      ✅ Tool 接口不变 &nbsp; ✅ AgentLoop 不解耦 &nbsp; ✅ MockDataStore 不排序<br>
+      ⚠️ 但引入了 ThreadLocal（Spring 单线程模型下安全，WebSocket 需注意）
+    </div>
+  </div>
+</div>

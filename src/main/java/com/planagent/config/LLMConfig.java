@@ -65,15 +65,9 @@ public class LLMConfig {
 
     @Bean
     public ChatLanguageModel deepThinkingModel() {
-        String apiKey = !deepseekApiKey.isEmpty() ? deepseekApiKey : System.getenv("DEEPSEEK_API_KEY");
-        return OpenAiChatModel.builder()
-            .baseUrl(deepseekBaseUrl)
-            .apiKey(apiKey)
-            .modelName("deepseek-v4-pro")
-            .timeout(Duration.ofSeconds(120))
-            .maxRetries(2)
-            .logRequests(true)
-            .logResponses(true)
-            .build();
+        if ("qwen".equalsIgnoreCase(primary)) {
+            return buildModel(qwenApiKey, "QWEN_API_KEY", qwenBaseUrl, "qwen-max");
+        }
+        return buildModel(deepseekApiKey, "DEEPSEEK_API_KEY", deepseekBaseUrl, "deepseek-v4-pro");
     }
 }

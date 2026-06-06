@@ -46,10 +46,17 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         if ("confirm".equals(type)) {
             ctx.confirmedPlan = content;
-            chatService.confirm(ctx)
+            chatService.confirm(ctx, content)
                 .doOnNext(step -> send(wsSession, step))
                 .doOnError(e -> send(wsSession, AgentStep.error(e.getMessage())))
                 .doFinally(s -> log.info("Confirmation done: {}", sessionId))
+                .subscribe();
+        } else if (ctx.confirmedPlan != null) {
+            // Post-plan message: route to confirm (user is confirming the plan)
+            chatService.confirm(ctx, content)
+                .doOnNext(step -> send(wsSession, step))
+                .doOnError(e -> send(wsSession, AgentStep.error(e.getMessage())))
+                .doFinally(s -> log.info("Post-plan confirm done: {}", sessionId))
                 .subscribe();
         } else {
             chatService.execute(ctx, content, deepThinking)

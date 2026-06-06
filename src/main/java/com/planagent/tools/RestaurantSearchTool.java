@@ -3,6 +3,10 @@ package com.planagent.tools;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.planagent.amap.AmapClient;
 import com.planagent.mock.MockDataStore;
+import com.planagent.model.Restaurant;
+import com.planagent.model.SessionContext;
+import com.planagent.scoring.ScoringEngine;
+import com.planagent.scoring.SessionContextHolder;
 import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
@@ -12,7 +16,8 @@ public class RestaurantSearchTool {
     private final ObjectMapper mapper = new ObjectMapper();
 
     @SuppressWarnings("unchecked")
-    public RestaurantSearchTool(ToolRegistry registry, MockDataStore store, AmapClient amapClient) {
+    public RestaurantSearchTool(ToolRegistry registry, MockDataStore store, AmapClient amapClient,
+                                ScoringEngine scoringEngine) {
         registry.register("search_restaurants",
             "搜索符合条件的餐厅",
             Map.of(
@@ -31,7 +36,11 @@ public class RestaurantSearchTool {
                     var result = amapClient.searchRestaurants(keyword, tags, budget, kidFriendly);
                     if (result != null) return mapper.writeValueAsString(result);
                 }
-                var results = store.searchRestaurants(keyword, tags, budget, kidFriendly);
+                List<Restaurant> results = store.searchRestaurants(keyword, tags, budget, kidFriendly);
+                SessionContext ctx = SessionContextHolder.get();
+                if (ctx != null) {
+                    results = scoringEngine.rankRestaurants(results, ctx);
+                }
                 return mapper.writeValueAsString(results);
             });
     }

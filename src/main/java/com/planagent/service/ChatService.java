@@ -64,16 +64,23 @@ public class ChatService {
     }
 
     /**
-     * Execute confirmed plan actions, persisting to database.
+     * Execute confirmed plan actions with user message, persisting to database.
      */
-    public Flux<AgentStep> confirm(SessionContext ctx) {
-        return agentLoop.confirm(ctx)
+    public Flux<AgentStep> confirm(SessionContext ctx, String userMessage) {
+        return agentLoop.confirm(ctx, userMessage)
             .doOnNext(step -> {
                 if (step.type != null) {
                     repo.saveAgentStep(ctx.sessionId, nextSeq(ctx.sessionId), step);
                 }
             })
             .doOnComplete(() -> log.info("Confirmation complete for session {}", ctx.sessionId));
+    }
+
+    /**
+     * Execute confirmed plan actions (backward compatible).
+     */
+    public Flux<AgentStep> confirm(SessionContext ctx) {
+        return confirm(ctx, "确认");
     }
 
     private int nextSeq(String sessionId) {

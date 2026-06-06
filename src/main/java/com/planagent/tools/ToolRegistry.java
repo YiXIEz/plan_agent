@@ -1,6 +1,8 @@
 package com.planagent.tools;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.planagent.model.SessionContext;
+import com.planagent.scoring.SessionContextHolder;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.model.chat.request.json.*;
@@ -57,6 +59,25 @@ public class ToolRegistry {
             return executor.execute(request.arguments());
         } catch (Exception e) {
             return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+    }
+
+    /**
+     * Execute a tool with SessionContext. The SessionContext is set in a ThreadLocal
+     * before execution so that search tools can access it for scoring.
+     */
+    public String execute(ToolExecutionRequest req, SessionContext ctx) {
+        SessionContextHolder.set(ctx);
+        try {
+            ToolExecutor executor = tools.get(req.name());
+            if (executor == null) {
+                return "{\"error\": \"Unknown tool: " + req.name() + "\"}";
+            }
+            return executor.execute(req.arguments());
+        } catch (Exception e) {
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        } finally {
+            SessionContextHolder.clear();
         }
     }
 }

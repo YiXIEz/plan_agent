@@ -1,0 +1,80 @@
+<h2>Phase 2 架构集成总览</h2>
+<p class="subtitle">左侧：当前架构 | 右侧：Phase 2 变更及集成点</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">当前架构（Phase 1）</div>
+    <div class="mockup-body" style="font-size:13px;line-height:1.6">
+      <div style="background:#1a1a2e;border-radius:6px;padding:10px;margin-bottom:8px;text-align:center;color:#7ec8e3">
+        <strong>Browser (index.html)</strong><br>
+        <span style="font-size:11px;color:#888">WebSocket 连接</span>
+      </div>
+      <div style="text-align:center;color:#555;margin:4px 0">▼</div>
+      <div style="background:#16213e;border-radius:6px;padding:10px;margin-bottom:8px;text-align:center;color:#e2c044">
+        <strong>ChatWebSocketHandler</strong><br>
+        <span style="font-size:11px;color:#888">消息路由: goal → plan()<br>confirm → confirm()</span>
+      </div>
+      <div style="text-align:center;color:#555;margin:4px 0">▼</div>
+      <div style="background:#0f3460;border-radius:6px;padding:10px;margin-bottom:8px;text-align:center;color:#53d8a0">
+        <strong>AgentLoop</strong><br>
+        <span style="font-size:11px;color:#888">ReAct 循环 (plan/confirm)</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <div style="flex:1;background:#1a1a2e;border-radius:4px;padding:6px;text-align:center;font-size:11px;color:#7ec8e3">
+          <strong>LLM</strong><br>DeepSeek → Qwen
+        </div>
+        <div style="flex:1;background:#1a1a2e;border-radius:4px;padding:6px;text-align:center;font-size:11px;color:#e2c044">
+          <strong>ToolRegistry</strong><br>10 tools
+        </div>
+      </div>
+      <div style="text-align:center;color:#555;margin:4px 0">▼</div>
+      <div style="background:#1a1a2e;border-radius:4px;padding:6px;text-align:center;font-size:11px;color:#c9c9c9">
+        <strong>MockDataStore</strong><br>
+        简单过滤返回 (无排序)
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">Phase 2 目标架构</div>
+    <div class="mockup-body" style="font-size:13px;line-height:1.6">
+      <div style="background:#1a1a2e;border-radius:6px;padding:10px;margin-bottom:8px;text-align:center;color:#7ec8e3">
+        <strong>Browser (index.html)</strong><br>
+        <span style="font-size:11px;color:#53d8a0">🆕 NOTIFY 卡片 + replan 消息</span>
+      </div>
+      <div style="text-align:center;color:#555;margin:4px 0">▼</div>
+      <div style="background:#16213e;border-radius:6px;padding:10px;margin-bottom:8px;text-align:center;color:#e2c044">
+        <strong>ChatWebSocketHandler</strong><br>
+        <span style="font-size:11px;color:#53d8a0">🆕 "replan" 消息路由</span>
+      </div>
+      <div style="text-align:center;color:#555;margin:4px 0">▼</div>
+      <div style="background:#0f3460;border-radius:6px;padding:10px;margin-bottom:8px;text-align:center;color:#53d8a0">
+        <strong>AgentLoop</strong><br>
+        <span style="font-size:11px;color:#ff6b6b">✏️ confirm() 重构</span>
+        <span style="font-size:11px;color:#53d8a0">🆕 replan() 方法</span>
+        <span style="font-size:11px;color:#888">🆕 注入 ReplanningHandler</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <div style="flex:1;background:#1a1a2e;border-radius:4px;padding:6px;text-align:center;font-size:11px;color:#7ec8e3">
+          <strong>LLM</strong><br>未变
+        </div>
+        <div style="flex:1;background:#1a1a2e;border-radius:4px;padding:6px;text-align:center;font-size:11px;color:#e2c044">
+          <strong>ToolRegistry</strong><br>未变
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <div style="flex:1;background:#1e3a2f;border-radius:4px;padding:6px;text-align:center;font-size:11px;color:#53d8a0">
+          <strong>🆕 ScoringEngine</strong><br>归一化+加权排序
+        </div>
+        <div style="flex:1;background:#1e3a2f;border-radius:4px;padding:6px;text-align:center;font-size:11px;color:#53d8a0">
+          <strong>🆕 ReplanningHandler</strong><br>失败分析+重规划
+        </div>
+      </div>
+      <div style="text-align:center;color:#555;margin:4px 0">▼</div>
+      <div style="background:#1a1a2e;border-radius:4px;padding:6px;text-align:center;font-size:11px;color:#ff6b6b">
+        <strong>MockDataStore ✏️</strong><br>
+        注入 ScoringEngine → search 返回排序结果
+      </div>
+    </div>
+  </div>
+</div>

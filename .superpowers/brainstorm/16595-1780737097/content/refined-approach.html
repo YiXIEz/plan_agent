@@ -1,0 +1,87 @@
+<h2>"不修改前端" 约束下的精简架构</h2>
+<p class="subtitle">去掉 NOTIFY 类型 + replan 路由，保持前端不变</p>
+
+<div class="mockup">
+  <div class="mockup-header">修正后的 confirm() 流程</div>
+  <div class="mockup-body" style="font-size:12px;line-height:1.5">
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <div style="flex:1;background:#0f3460;border-radius:4px;padding:8px;text-align:center;color:#7ec8e3">
+        <strong>LLM 调 Tool</strong><br>
+        <span style="font-size:10px">逐条执行</span>
+      </div>
+      <div style="flex:1;background:#0f3460;border-radius:4px;padding:8px;text-align:center;color:#7ec8e3">
+        <strong>analyze()</strong><br>
+        <span style="font-size:10px">判断结果</span>
+      </div>
+      <div style="flex:1;background:#0f3460;border-radius:4px;padding:8px;text-align:center;color:#7ec8e3">
+        <strong>分支</strong>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <div style="flex:1;background:#1e3a2f;border-radius:4px;padding:8px;text-align:center;font-size:11px;color:#53d8a0">
+        <strong>SUCCESS</strong><br>
+        (含 LONG_WAIT)<br>
+        → 继续下一条
+      </div>
+      <div style="flex:1;background:#2a1a1a;border-radius:4px;padding:8px;text-align:center;font-size:11px;color:#ff6b6b">
+        <strong>FULLY_BOOKED</strong><br>
+        <strong>NOT_AVAILABLE</strong><br>
+        → 局部重规划<br>
+        (while 循环内, ≤3次)
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:8px;color:#888;font-size:11px">
+      全部 Tool 执行完 → DONE (含等待时间汇总)
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:16px">
+  <h3>简化对比</h3>
+</div>
+
+<table style="width:100%;font-size:13px;border-collapse:collapse">
+  <tr style="background:#16213e">
+    <th style="padding:8px;text-align:left">原计划</th>
+    <th style="padding:8px;text-align:left;color:#53d8a0">修正后</th>
+  </tr>
+  <tr style="border-bottom:1px solid #333">
+    <td style="padding:8px">🆕 AgentStep.Type.NOTIFY</td>
+    <td style="padding:8px;color:#53d8a0">❌ 不需要 — LONG_WAIT 归入 SUCCESS</td>
+  </tr>
+  <tr style="border-bottom:1px solid #333">
+    <td style="padding:8px">🆕 AgentLoop.replan()</td>
+    <td style="padding:8px;color:#53d8a0">❌ 不需要 — 失败自动重试，无需用户交互</td>
+  </tr>
+  <tr style="border-bottom:1px solid #333">
+    <td style="padding:8px">🆕 WebSocket "replan" 路由</td>
+    <td style="padding:8px;color:#53d8a0">❌ 不需要</td>
+  </tr>
+  <tr style="border-bottom:1px solid #333">
+    <td style="padding:8px">🆕 前端 NOTIFY 卡片 + 按钮</td>
+    <td style="padding:8px;color:#53d8a0">❌ 不需要</td>
+  </tr>
+  <tr>
+    <td style="padding:8px;color:#888">7 个 Task → 8 个 commit</td>
+    <td style="padding:8px;color:#53d8a0">精简为 5 个 Task</td>
+  </tr>
+</table>
+
+<div style="margin-top:16px">
+  <h3>保留的核心</h3>
+</div>
+
+<div style="display:flex;gap:8px">
+  <div style="flex:1;background:#1e3a2f;border-radius:4px;padding:12px;text-align:center">
+    <strong style="color:#53d8a0">ScoringEngine</strong><br>
+    <span style="font-size:11px;color:#aaa">ThreadLocal → Tool → rank</span>
+  </div>
+  <div style="flex:1;background:#1e3a2f;border-radius:4px;padding:12px;text-align:center">
+    <strong style="color:#53d8a0">ReplanningHandler</strong><br>
+    <span style="font-size:11px;color:#aaa">仅处理 FULLY_BOOKED + NOT_AVAILABLE</span>
+  </div>
+  <div style="flex:1;background:#1e3a2f;border-radius:4px;padding:12px;text-align:center">
+    <strong style="color:#53d8a0">confirm() 重构</strong><br>
+    <span style="font-size:11px;color:#aaa">while 循环自动重试</span>
+  </div>
+</div>

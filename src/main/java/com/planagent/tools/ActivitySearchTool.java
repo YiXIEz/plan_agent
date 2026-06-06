@@ -3,14 +3,20 @@ package com.planagent.tools;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.planagent.amap.AmapClient;
 import com.planagent.mock.MockDataStore;
+import com.planagent.model.Activity;
+import com.planagent.model.SessionContext;
+import com.planagent.scoring.ScoringEngine;
+import com.planagent.scoring.SessionContextHolder;
 import org.springframework.stereotype.Component;
+import java.util.List;
 import java.util.Map;
 
 @Component
 public class ActivitySearchTool {
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public ActivitySearchTool(ToolRegistry registry, MockDataStore store, AmapClient amapClient) {
+    public ActivitySearchTool(ToolRegistry registry, MockDataStore store, AmapClient amapClient,
+                              ScoringEngine scoringEngine) {
         registry.register("search_activities",
             "搜索附近的亲子活动/公园/展览/手工坊",
             Map.of(
@@ -29,7 +35,11 @@ public class ActivitySearchTool {
                     var result = amapClient.searchActivities(type, age, duration, dist);
                     if (result != null) return mapper.writeValueAsString(result);
                 }
-                var results = store.searchActivities(type, age, duration, dist);
+                List<Activity> results = store.searchActivities(type, age, duration, dist);
+                SessionContext ctx = SessionContextHolder.get();
+                if (ctx != null) {
+                    results = scoringEngine.rankActivities(results, ctx, age);
+                }
                 return mapper.writeValueAsString(results);
             });
     }

@@ -1,0 +1,101 @@
+<h2>基于真实前端代码的精简集成方案</h2>
+<p class="subtitle">关键发现：前端不区分 goal/confirm/replan — 全部走 execute()</p>
+
+<div class="mockup">
+  <div class="mockup-header">当前消息流</div>
+  <div class="mockup-body" style="font-size:12px;line-height:1.5">
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <div style="flex:1;background:#1a1a2e;border-radius:4px;padding:8px;text-align:center;color:#7ec8e3;font-size:11px">
+        <strong>React 前端</strong><br>
+        send("{content, deepThinking}")<br>
+        <span style="color:#ff6b6b">无 type 字段!</span>
+      </div>
+      <div style="text-align:center;color:#555;align-self:center">→</div>
+      <div style="flex:1;background:#16213e;border-radius:4px;padding:8px;text-align:center;color:#e2c044;font-size:11px">
+        <strong>ChatWebSocketHandler</strong><br>
+        type 默认为 "goal"<br>
+        <span style="color:#ff6b6b">永远走 execute()</span>
+      </div>
+      <div style="text-align:center;color:#555;align-self:center">→</div>
+      <div style="flex:1;background:#0f3460;border-radius:4px;padding:8px;text-align:center;color:#53d8a0;font-size:11px">
+        <strong>AgentLoop.execute()</strong><br>
+        ReAct loop + conversation history<br>
+        LLM 从上下文理解用户意图
+      </div>
+    </div>
+    <div style="text-align:center;font-size:11px;color:#888;margin-top:4px">
+      "确认" → execute() 中 LLM 看到历史 + 确认 → 生成预订 Tool
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:20px">
+  <h3>修正后的集成方案</h3>
+</div>
+
+<div class="mockup">
+  <div class="mockup-header">ChatWebSocketHandler 改动（最小化）</div>
+  <div class="mockup-body" style="font-size:13px;line-height:1.5">
+    <div style="background:#1e2a1a;border-radius:4px;padding:10px;margin-bottom:8px;color:#53d8a0">
+      <strong>唯一改动：</strong>当 <code>ctx.confirmedPlan != null</code> 时，将后续消息路由到 <code>confirm()</code>
+    </div>
+    <pre style="font-size:11px;color:#ccc;margin:0">// 修改前（永远走 execute）
+} else {
+    chatService.execute(ctx, content, deepThinking) ...
+
+// 修改后（确认后的消息走 confirm）
+} else if (ctx.confirmedPlan != null) {
+    chatService.confirm(ctx, content) ...  // ← 新增路由
+} else {
+    chatService.execute(ctx, content, deepThinking) ...
+}</pre>
+  </div>
+</div>
+
+<div style="margin-top:12px">
+  <h3>对 confirm() 的影响</h3>
+</div>
+
+<div class="mockup">
+  <div class="mockup-header">AgentLoop.confirm() — 自动重试 + 继续执行</div>
+  <div class="mockup-body" style="font-size:12px;line-height:1.5">
+    <div style="display:flex;gap:8px">
+      <div style="flex:1;background:#1e3a2f;border-radius:4px;padding:8px;text-align:center;font-size:11px;color:#53d8a0">
+        <strong>SUCCESS</strong><br>
+        （含 LONG_WAIT）<br>
+        → 继续下一条 Tool<br>
+        → DONE 汇总等待信息
+      </div>
+      <div style="flex:1;background:#2a1a1a;border-radius:4px;padding:8px;text-align:center;font-size:11px;color:#ff6b6b">
+        <strong>FULLY_BOOKED</strong><br>
+        <strong>NOT_AVAILABLE</strong><br>
+        → while 循环内重新调 LLM<br>
+        → ≤3 次，逐步扩大搜索半径
+      </div>
+      <div style="flex:1;background:#2a1a1a;border-radius:4px;padding:8px;text-align:center;font-size:11px;color:#ff6b6b">
+        <strong>超过 3 次</strong><br>
+        → ERROR: "自动调整失败"<br>
+        → 用户可手动重新规划
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:20px">
+  <h3>最终变更清单 vs 原计划</h3>
+</div>
+
+<table style="width:100%;font-size:13px;border-collapse:collapse">
+  <tr style="background:#16213e">
+    <th style="padding:8px;text-align:left;width:50%">原计划（8 Tasks）</th>
+    <th style="padding:8px;text-align:left;color:#53d8a0;width:50%">修正后（5 Tasks）</th>
+  </tr>
+  <tr style="border-bottom:1px solid #333"><td style="padding:8px">Task 1: ScenarioWeights + WeightConfig</td><td style="padding:8px;color:#53d8a0">✅ 不变</td></tr>
+  <tr style="border-bottom:1px solid #333"><td style="padding:8px">Task 2: ScoringEngine</td><td style="padding:8px;color:#53d8a0">✅ 不变（B3 ThreadLocal）</td></tr>
+  <tr style="border-bottom:1px solid #333"><td style="padding:8px">Task 3: ReplanningHandler</td><td style="padding:8px;color:#53d8a0">✅ 简化（仅 FAILED 分支）</td></tr>
+  <tr style="border-bottom:1px solid #333"><td style="padding:8px">Task 4: MockDataStore 注入 ScoringEngine</td><td style="padding:8px;color:#ff6b6b">❌ 不需要 — Tool 层调用</td></tr>
+  <tr style="border-bottom:1px solid #333"><td style="padding:8px">Task 5: NOTIFY + confirm() 重构</td><td style="padding:8px;color:#53d8a0">✅ confirm() 重构（无 NOTIFY）</td></tr>
+  <tr style="border-bottom:1px solid #333"><td style="padding:8px">Task 6: WebSocket replan 路由</td><td style="padding:8px;color:#ff6b6b">❌ 不需要</td></tr>
+  <tr style="border-bottom:1px solid #333"><td style="padding:8px">Task 7: 前端 NOTIFY 卡片</td><td style="padding:8px;color:#ff6b6b">❌ 不需要</td></tr>
+  <tr><td style="padding:8px">Task 8: E2E 验证</td><td style="padding:8px;color:#53d8a0">✅ 保留</td></tr>
+</table>
