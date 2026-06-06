@@ -40,6 +40,12 @@ public class MockDataStore {
         activities.add(new Activity("act-007", "星光影城亲子厅", "电影/室内", 4.3, "1.5km",
             "2小时", "￥50/人",
             List.of("亲子影厅", "儿童座椅", "低音量播放", "亲子套餐"), "3岁以上", "10:00-22:00"));
+        activities.add(new Activity("act-008", "万达广场亲子区", "商场/室内", 4.5, "3.5km",
+            "2-3小时", "免费（项目单独收费）",
+            List.of("儿童游乐区", "亲子手工", "迷你动物园", "亲子餐厅"), "全年龄", "10:00-22:00"));
+        activities.add(new Activity("act-009", "大悦城探索乐园", "商场/室内", 4.6, "4.5km",
+            "2-3小时", "￥158/人",
+            List.of("室内攀岩", "蹦床", "职业体验", "科学实验"), "3-12岁", "10:00-21:00"));
     }
 
     private void initRestaurants() {
@@ -61,14 +67,38 @@ public class MockDataStore {
             "￥60/人", List.of("素食", "轻食", "有机", "低卡"), true, true, "无需排队", "可容纳4人"));
     }
 
+    private static final Map<String, List<String>> TYPE_ALIASES = Map.ofEntries(
+        Map.entry("商场", List.of("商场")),
+        Map.entry("购物", List.of("商场")),
+        Map.entry("室内", List.of("室内", "商场")),
+        Map.entry("户外", List.of("户外", "公园", "自然")),
+        Map.entry("运动", List.of("运动", "蹦床")),
+        Map.entry("科技", List.of("科技馆", "展览")),
+        Map.entry("展览", List.of("展览", "科技馆")),
+        Map.entry("电影", List.of("电影", "影城")),
+        Map.entry("手工", List.of("手工", "DIY")),
+        Map.entry("公园", List.of("公园", "户外")),
+        Map.entry("亲子", List.of("亲子", "乐园"))
+    );
+
     public List<Activity> searchActivities(String type, int childAge, String duration, String maxDistance) {
         double maxDistKm = parseDistance(maxDistance);
         return activities.stream()
-            .filter(a -> type == null || type.isEmpty() || a.type.contains(type))
+            .filter(a -> matchesType(a, type))
             .filter(a -> isAgeSuitable(a.ageSuitable, childAge))
             .filter(a -> parseDistance(a.distance) <= maxDistKm)
             .sorted(Comparator.comparingDouble(a -> -a.rating))
             .collect(Collectors.toList());
+    }
+
+    private boolean matchesType(Activity a, String type) {
+        if (type == null || type.isEmpty()) return true;
+        if (a.type.contains(type) || a.name.contains(type)) return true;
+        List<String> aliases = TYPE_ALIASES.get(type);
+        if (aliases != null) {
+            return aliases.stream().anyMatch(alias -> a.type.contains(alias) || a.name.contains(alias));
+        }
+        return a.type.contains(type) || a.highlights.stream().anyMatch(f -> f.contains(type));
     }
 
     public List<Restaurant> searchRestaurants(String keyword, List<String> tags, String budget, boolean kidFriendly) {

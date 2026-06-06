@@ -17,7 +17,7 @@ amap:
 
 spring:
   datasource:
-    url: jdbc:h2:file:./data/conversation;AUTO_SERVER=TRUE
+    url: jdbc:h2:mem:plan_agent;DB_CLOSE_DELAY=-1;MODE=MYSQL
     username: sa
     password:
     driver-class-name: org.h2.Driver
