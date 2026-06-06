@@ -12,6 +12,9 @@ import java.time.Duration;
 @Configuration
 public class LLMConfig {
 
+    @Value("${llm.primary:deepseek}")
+    private String primary;
+
     @Value("${llm.deepseek.api-key:}")
     private String deepseekApiKey;
 
@@ -33,25 +36,26 @@ public class LLMConfig {
     @Bean
     @Primary
     public ChatLanguageModel primaryModel() {
-        String apiKey = !deepseekApiKey.isEmpty() ? deepseekApiKey : System.getenv("DEEPSEEK_API_KEY");
-        return OpenAiChatModel.builder()
-            .baseUrl(deepseekBaseUrl)
-            .apiKey(apiKey)
-            .modelName(deepseekModel)
-            .timeout(Duration.ofSeconds(60))
-            .maxRetries(2)
-            .logRequests(true)
-            .logResponses(true)
-            .build();
+        if ("qwen".equalsIgnoreCase(primary)) {
+            return buildModel(qwenApiKey, "QWEN_API_KEY", qwenBaseUrl, qwenModel);
+        }
+        return buildModel(deepseekApiKey, "DEEPSEEK_API_KEY", deepseekBaseUrl, deepseekModel);
     }
 
     @Bean
     public ChatLanguageModel fallbackModel() {
-        String apiKey = !qwenApiKey.isEmpty() ? qwenApiKey : System.getenv("QWEN_API_KEY");
+        if ("qwen".equalsIgnoreCase(primary)) {
+            return buildModel(deepseekApiKey, "DEEPSEEK_API_KEY", deepseekBaseUrl, deepseekModel);
+        }
+        return buildModel(qwenApiKey, "QWEN_API_KEY", qwenBaseUrl, qwenModel);
+    }
+
+    private ChatLanguageModel buildModel(String apiKey, String envVar, String baseUrl, String model) {
+        String key = (apiKey != null && !apiKey.isEmpty()) ? apiKey : System.getenv(envVar);
         return OpenAiChatModel.builder()
-            .baseUrl(qwenBaseUrl)
-            .apiKey(apiKey)
-            .modelName(qwenModel)
+            .baseUrl(baseUrl)
+            .apiKey(key != null ? key : "")
+            .modelName(model)
             .timeout(Duration.ofSeconds(60))
             .maxRetries(2)
             .logRequests(true)

@@ -14,7 +14,7 @@ public class ActivitySearchTool {
         registry.register("search_activities",
             "搜索附近的亲子活动/公园/展览/手工坊",
             Map.of(
-                "type", Map.of("type", "string", "description", "活动类型: 亲子乐园, 展览, 公园, 手工坊, 运动, 电影"),
+                "type", Map.of("type", "string", "description", "活动类型: 亲子乐园, 展览, 公园, 手工坊, 运动, 电影, 商场, 购物, 室内, 户外"),
                 "childAge", Map.of("type", "integer", "description", "孩子年龄"),
                 "duration", Map.of("type", "string", "description", "预计停留时长，如2-3小时"),
                 "maxDistance", Map.of("type", "string", "description", "距离上限，如5.0km")
