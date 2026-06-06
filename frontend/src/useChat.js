@@ -20,9 +20,7 @@ export default function useChat() {
     socket.onmessage = (event) => {
       const step = JSON.parse(event.data);
       setMessages(prev => handleStep(prev, step));
-      if (step.type === 'FINAL_PLAN' || step.type === 'ERROR' || step.type === 'DONE') {
-        setLoading(false);
-      }
+      if (['FINAL_PLAN', 'ERROR', 'DONE'].includes(step.type)) setLoading(false);
     };
     socket.onclose = () => setLoading(false);
     socket.onerror = () => setLoading(false);
@@ -40,7 +38,34 @@ export default function useChat() {
     }
   }, []);
 
-  return { messages, loading, send };
+  const loadHistory = useCallback((rows) => {
+    const msgs = [];
+    let round = null;
+    rows.forEach(row => {
+      if (row.role === 'user') {
+        if (round) { msgs.push(round); round = null; }
+        msgs.push({ id: Date.now() + Math.random(), role: 'user', content: row.content });
+      } else if (row.step_type === 'THOUGHT') {
+        if (round) msgs.push(round);
+        round = { id: Date.now() + Math.random(), type: 'round', children: [{ type: 'thought', content: row.content }] };
+      } else if (row.step_type === 'ACTION' && round) {
+        round.children.push({ type: 'action', tool: row.tool_name, params: row.tool_params });
+      } else if (row.step_type === 'OBSERVATION' && round) {
+        round.children.push({ type: 'observation', content: row.content });
+      } else if (row.step_type === 'FINAL_PLAN') {
+        if (round) { msgs.push(round); round = null; }
+        msgs.push({ id: Date.now() + Math.random(), type: 'plan', content: row.content });
+      } else if (row.step_type === 'DONE') {
+        msgs.push({ id: Date.now() + Math.random(), type: 'done', content: row.content });
+      } else if (row.step_type === 'ERROR') {
+        msgs.push({ id: Date.now() + Math.random(), type: 'error', content: row.content });
+      }
+    });
+    if (round) msgs.push(round);
+    setMessages(msgs);
+  }, []);
+
+  return { messages, loading, send, loadHistory };
 }
 
 function handleStep(prev, step) {
@@ -65,7 +90,6 @@ function toChild(step) {
 function toMsg(step) {
   const base = { id: Date.now() };
   if (step.type === 'FINAL_PLAN') return { ...base, type: 'plan', content: step.content };
-  if (step.type === 'CONFIRMING') return { ...base, type: 'confirming', content: step.content };
   if (step.type === 'DONE') return { ...base, type: 'done', content: step.content };
   if (step.type === 'ERROR') return { ...base, type: 'error', content: step.content };
   return { ...base, type: 'text', content: step.content || '' };

@@ -47,12 +47,20 @@ public class MessageRepository {
     public List<Map<String, Object>> loadMessages(String sessionId) {
         return jdbc.queryForList(
             "SELECT seq, role, content, step_type, tool_name, tool_params, created_at " +
-            "FROM messages WHERE session_id = ? ORDER BY seq", sessionId);
+            "FROM messages WHERE session_id = ? ORDER BY seq", sessionId).stream()
+            .map(this::lowerKeys).toList();
     }
 
     public List<Map<String, Object>> listSessions() {
         return jdbc.queryForList(
-            "SELECT session_id, title, created_at, updated_at FROM sessions ORDER BY updated_at DESC LIMIT 50");
+            "SELECT session_id, title, created_at, updated_at FROM sessions ORDER BY updated_at DESC LIMIT 50").stream()
+            .map(this::lowerKeys).toList();
+    }
+
+    private Map<String, Object> lowerKeys(Map<String, Object> row) {
+        Map<String, Object> m = new java.util.LinkedHashMap<>();
+        row.forEach((k, v) -> m.put(k.toLowerCase(), v));
+        return m;
     }
 
     public void deleteSession(String sessionId) {

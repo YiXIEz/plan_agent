@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Bubble, Sender, Conversations, ThoughtChain, XProvider } from '@ant-design/x';
 import { Button, Tag, Space, Typography, theme } from 'antd';
 import { RobotOutlined, PlusOutlined } from '@ant-design/icons';
@@ -7,10 +7,19 @@ import useChat from './useChat';
 const { Text } = Typography;
 
 export default function App() {
-  const { messages, loading, send } = useChat();
-  const [convoKey, setConvoKey] = useState('1');
-  const [convos] = useState([{ key: '1', label: '新对话' }]);
+  const { messages, loading, send, loadHistory } = useChat();
+  const [convos, setConvos] = useState([]);
+  const [activeKey, setActiveKey] = useState(null);
   const { token } = theme.useToken();
+
+  function refreshSessions() {
+    fetch('/api/sessions').then(r => r.json()).then(data => {
+      setConvos(data.map(s => ({ key: s.session_id, label: s.title || '对话' })));
+    }).catch(() => {});
+  }
+
+  useEffect(() => { refreshSessions(); }, []);
+  useEffect(() => { refreshSessions(); }, [messages.length]);
 
   return (
     <XProvider>
@@ -29,7 +38,16 @@ export default function App() {
             <Button type="primary" block icon={<PlusOutlined />} onClick={() => location.reload()}>新对话</Button>
           </div>
           <div style={{ flex: 1, overflow: 'auto', padding: '0 8px' }}>
-            <Conversations items={convos} activeKey={convoKey} onActiveChange={setConvoKey} />
+            <Conversations
+              items={convos}
+              activeKey={activeKey}
+              onActiveChange={(key) => {
+                if (key) {
+                  setActiveKey(key);
+                  fetch(`/api/sessions/${key}/messages`).then(r => r.json()).then(rows => loadHistory(rows)).catch(() => {});
+                }
+              }}
+            />
           </div>
         </div>
 
@@ -73,23 +91,18 @@ export default function App() {
 function AgentRound({ items, token }) {
   const chainItems = items.map((item, i) => {
     if (item.type === 'thought') return {
-      key: i,
-      title: <Text type="secondary" style={{ fontSize: 12 }}>思考</Text>,
+      key: i, title: <Text type="secondary" style={{ fontSize: 12 }}>思考</Text>,
       icon: <span style={{ fontSize: 14 }}>💡</span>,
-      description: <Text type="secondary" italic style={{ fontStyle: 'italic' }}>{item.content}</Text>,
+      description: <Text type="secondary" style={{ fontStyle: 'italic' }}>{item.content}</Text>,
     };
     if (item.type === 'action') return {
-      key: i,
-      title: <Text type="secondary" style={{ fontSize: 12 }}>调用工具</Text>,
+      key: i, title: <Text type="secondary" style={{ fontSize: 12 }}>调用工具</Text>,
       icon: <span style={{ fontSize: 14 }}>🔧</span>,
-      description: <Space size={4}>
-        <Tag color="blue" style={{ fontFamily: 'monospace' }}>{item.tool}</Tag>
-        {item.params && <Text type="secondary" style={{ fontFamily: 'monospace', fontSize: 12 }}>{item.params.slice(0, 80)}</Text>}
-      </Space>,
+      description: <Space size={4}><Tag color="blue" style={{ fontFamily: 'monospace' }}>{item.tool}</Tag>
+        {item.params && <Text type="secondary" style={{ fontFamily: 'monospace', fontSize: 12 }}>{item.params?.slice(0, 80)}</Text>}</Space>,
     };
     if (item.type === 'observation') return {
-      key: i,
-      title: <Text type="secondary" style={{ fontSize: 12 }}>返回结果</Text>,
+      key: i, title: <Text type="secondary" style={{ fontSize: 12 }}>返回结果</Text>,
       icon: <span style={{ fontSize: 14 }}>👁</span>,
       description: <pre style={{ background: token.colorSuccessBg, border: `1px solid ${token.colorSuccessBorder}`,
         borderRadius: 6, padding: '8px 12px', maxHeight: 160, overflow: 'auto',
@@ -97,7 +110,6 @@ function AgentRound({ items, token }) {
     };
     return { key: i, title: '?', description: '' };
   });
-
   return <div style={{ marginBottom: 8 }}><ThoughtChain items={chainItems} /></div>;
 }
 
@@ -108,17 +120,12 @@ function PlanCard({ content, token }) {
     .replace(/^### (.+)$/gm, '<h4 style="margin:10px 0 4px;font-size:15px">$1</h4>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/`([^`]+)`/g, '<code style="background:rgba(0,0,0,0.06);padding:2px 6px;border-radius:4px;font-size:13px">$1</code>')
-    .replace(/^- (.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>.*<\/li>)/g, '<ul style="padding-left:20px">$&</ul>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>').replace(/(<li>.*<\/li>)/g, '<ul style="padding-left:20px">$&</ul>')
     .replace(/---/g, '<hr style="border:none;border-top:1px solid rgba(0,0,0,0.06);margin:12px 0">')
     .replace(/\n\n/g, '<br><br>');
-
-  return (
-    <div style={{ background: token.colorWarningBg, border: `1px solid ${token.colorWarningBorder}`,
-      borderRadius: 12, padding: '16px 20px', lineHeight: 1.7, fontSize: 14 }}>
-      <div dangerouslySetInnerHTML={{ __html: html }} />
-    </div>
-  );
+  return <div style={{ background: token.colorWarningBg, border: `1px solid ${token.colorWarningBorder}`,
+    borderRadius: 12, padding: '16px 20px', lineHeight: 1.7, fontSize: 14 }}>
+    <div dangerouslySetInnerHTML={{ __html: html }} /></div>;
 }
 
 function formatJson(str) {
