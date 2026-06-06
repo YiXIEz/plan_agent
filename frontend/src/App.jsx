@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Bubble, Sender, Conversations, ThoughtChain, XProvider } from '@ant-design/x';
-import { Button, Tag, Space, Typography, theme } from 'antd';
+import { Button, Tag, Space, Typography, theme, Switch } from 'antd';
 import { RobotOutlined, PlusOutlined } from '@ant-design/icons';
 import useChat from './useChat';
 
@@ -10,6 +10,8 @@ export default function App() {
   const { messages, loading, send, loadHistory } = useChat();
   const [convos, setConvos] = useState([]);
   const [activeKey, setActiveKey] = useState(null);
+  const [inputVal, setInputVal] = useState('');
+  const [deepThinking, setDeepThinking] = useState(false);
   const { token } = theme.useToken();
 
   function refreshSessions() {
@@ -80,7 +82,11 @@ export default function App() {
           </div>
 
           <div style={{ padding: 16, borderTop: `1px solid ${token.colorBorderSecondary}` }}>
-            <Sender loading={loading} placeholder="输入你想安排的活动..." onSubmit={(val) => { if (val.trim()) send(val); }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <Switch checked={deepThinking} onChange={setDeepThinking} size="small" />
+              <Text type="secondary" style={{ fontSize: 12 }}>深度思考</Text>
+            </div>
+            <Sender loading={loading} value={inputVal} onChange={setInputVal} placeholder="输入你想安排的活动..." onSubmit={(val) => { if (val.trim()) { send(val, deepThinking); setInputVal(''); } }} />
           </div>
         </div>
       </div>

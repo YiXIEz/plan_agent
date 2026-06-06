@@ -40,6 +40,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         var node = mapper.readTree(payload);
         String type = node.has("type") ? node.get("type").asText() : "goal";
         String content = node.has("content") ? node.get("content").asText() : "";
+        boolean deepThinking = node.has("deepThinking") && node.get("deepThinking").asBoolean();
         String sessionId = wsSession.getId();
         SessionContext ctx = sessions.get(sessionId);
 
@@ -51,7 +52,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 .doFinally(s -> log.info("Confirmation done: {}", sessionId))
                 .subscribe();
         } else {
-            chatService.execute(ctx, content)
+            chatService.execute(ctx, content, deepThinking)
                 .doOnNext(step -> {
                     if (step.type == AgentStep.Type.FINAL_PLAN) {
                         ctx.confirmedPlan = step.content;

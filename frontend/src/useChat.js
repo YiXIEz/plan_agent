@@ -27,13 +27,14 @@ export default function useChat() {
     return () => socket.close();
   }, []);
 
-  const send = useCallback((text) => {
+  const send = useCallback((text, deepThinking) => {
     setMessages(prev => [...prev, { id: Date.now(), role: 'user', content: text }]);
+    const payload = JSON.stringify({ content: text, deepThinking: !!deepThinking });
     if (ws.current?.readyState === WebSocket.OPEN) {
-      ws.current.send(JSON.stringify({ content: text }));
+      ws.current.send(payload);
       setLoading(true);
     } else {
-      pending.current = JSON.stringify({ content: text });
+      pending.current = payload;
       setLoading(true);
     }
   }, []);
