@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Bubble, Sender, Conversations, ThoughtChain, XProvider } from '@ant-design/x';
 import { Button, Tag, Space, Typography, theme, Switch } from 'antd';
 import { RobotOutlined, PlusOutlined } from '@ant-design/icons';
+import { marked } from 'marked';
 import useChat from './useChat';
+
+marked.setOptions({ breaks: true, gfm: true });
 
 const { Text } = Typography;
 
@@ -121,17 +124,11 @@ function AgentRound({ items, token }) {
 
 function PlanCard({ content, token }) {
   if (!content) return null;
-  const html = content
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/^### (.+)$/gm, '<h4 style="margin:10px 0 4px;font-size:15px">$1</h4>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`([^`]+)`/g, '<code style="background:rgba(0,0,0,0.06);padding:2px 6px;border-radius:4px;font-size:13px">$1</code>')
-    .replace(/^- (.+)$/gm, '<li>$1</li>').replace(/(<li>.*<\/li>)/g, '<ul style="padding-left:20px">$&</ul>')
-    .replace(/---/g, '<hr style="border:none;border-top:1px solid rgba(0,0,0,0.06);margin:12px 0">')
-    .replace(/\n\n/g, '<br><br>');
+  const html = useMemo(() => marked.parse(content || ''), [content]);
   return <div style={{ background: token.colorWarningBg, border: `1px solid ${token.colorWarningBorder}`,
     borderRadius: 12, padding: '16px 20px', lineHeight: 1.7, fontSize: 14 }}>
-    <div dangerouslySetInnerHTML={{ __html: html }} /></div>;
+    <div dangerouslySetInnerHTML={{ __html: html }}
+      style={{ wordBreak: 'break-word' }} /></div>;
 }
 
 function formatJson(str) {

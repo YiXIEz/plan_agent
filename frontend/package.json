@@ -13,6 +13,7 @@
     "@ant-design/icons": "^6.2.5",
     "@ant-design/x": "^2.7.0",
     "antd": "^6.4.3",
+    "marked": "^18.0.5",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
   },
