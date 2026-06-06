@@ -4,12 +4,19 @@ export default function useChat() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const ws = useRef(null);
+  const pending = useRef(null);
 
-  const connect = useCallback(() => {
+  useEffect(() => {
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const socket = new WebSocket(`${protocol}//${location.host}/ws/chat`);
     ws.current = socket;
-    socket.onopen = () => setLoading(false);
+    socket.onopen = () => {
+      setLoading(false);
+      if (pending.current) {
+        socket.send(pending.current);
+        pending.current = null;
+      }
+    };
     socket.onmessage = (event) => {
       const step = JSON.parse(event.data);
       setMessages(prev => handleStep(prev, step));
@@ -17,18 +24,21 @@ export default function useChat() {
         setLoading(false);
       }
     };
-    socket.onclose = () => { setLoading(false); };
-    socket.onerror = () => { setLoading(false); };
+    socket.onclose = () => setLoading(false);
+    socket.onerror = () => setLoading(false);
+    return () => socket.close();
   }, []);
 
-  useEffect(() => { connect(); return () => ws.current?.close(); }, [connect]);
-
   const send = useCallback((text) => {
-    if (!ws.current || ws.current.readyState !== WebSocket.OPEN) { connect(); return; }
     setMessages(prev => [...prev, { id: Date.now(), role: 'user', content: text }]);
-    ws.current.send(JSON.stringify({ content: text }));
-    setLoading(true);
-  }, [connect]);
+    if (ws.current?.readyState === WebSocket.OPEN) {
+      ws.current.send(JSON.stringify({ content: text }));
+      setLoading(true);
+    } else {
+      pending.current = JSON.stringify({ content: text });
+      setLoading(true);
+    }
+  }, []);
 
   return { messages, loading, send };
 }
