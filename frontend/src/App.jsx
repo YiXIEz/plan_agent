@@ -49,16 +49,14 @@ export default function App() {
             )}
             <Bubble.List
               items={messages.map(msg => {
-                if (msg.role === 'user') return { key: msg.id, placement: 'end', content: msg.content, variant: 'filled' };
-                if (msg.type === 'round') return { key: msg.id, placement: 'start', variant: 'borderless',
-                  messageRender: () => <AgentRound items={msg.children} token={token} /> };
-                if (msg.type === 'plan') return { key: msg.id, placement: 'start', variant: 'borderless',
-                  messageRender: () => <PlanCard content={msg.content} token={token} /> };
-                if (msg.type === 'done') return { key: msg.id, placement: 'start',
-                  messageRender: () => <div style={{ padding: 12, background: token.colorSuccessBg, border: `1px solid ${token.colorSuccessBorder}`, borderRadius: 8, textAlign: 'center' }}>🎉 {msg.content}</div> };
-                if (msg.type === 'error') return { key: msg.id, placement: 'start',
-                  messageRender: () => <div style={{ padding: 10, background: token.colorErrorBg, border: `1px solid ${token.colorErrorBorder}`, borderRadius: 8, color: token.colorError }}>❌ {msg.content}</div> };
-                return { key: msg.id, placement: 'start', content: msg.content || '' };
+                if (msg.role === 'user') return { key: msg.id, role: 'user', content: msg.content };
+                if (msg.type === 'round') return { key: msg.id, role: 'ai', content: '',
+                  contentRender: () => <AgentRound items={msg.children} token={token} /> };
+                if (msg.type === 'plan') return { key: msg.id, role: 'ai', content: '',
+                  contentRender: () => <PlanCard content={msg.content} token={token} /> };
+                if (msg.type === 'done') return { key: msg.id, role: 'ai', content: msg.content };
+                if (msg.type === 'error') return { key: msg.id, role: 'ai', content: msg.content };
+                return { key: msg.id, role: 'ai', content: msg.content || '' };
               })}
             />
           </div>
