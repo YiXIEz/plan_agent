@@ -39,6 +39,10 @@ public class ChatService {
      * AgentLoop business logic is unchanged - this is a thin persistence wrapper.
      */
     public Flux<AgentStep> execute(SessionContext ctx, String userGoal) {
+        return execute(ctx, userGoal, false);
+    }
+
+    public Flux<AgentStep> execute(SessionContext ctx, String userGoal, boolean deepThinking) {
         // Lazy session creation on first message
         if (sessionCreated.putIfAbsent(ctx.sessionId, true) == null) {
             String title = userGoal.length() > 100 ? userGoal.substring(0, 100) : userGoal;
@@ -49,7 +53,7 @@ public class ChatService {
         // Save user message
         repo.saveUserMessage(ctx.sessionId, nextSeq(ctx.sessionId), userGoal);
 
-        return agentLoop.execute(ctx, userGoal)
+        return agentLoop.execute(ctx, userGoal, deepThinking)
             .doOnNext(step -> {
                 if (step.type != null) {
                     repo.saveAgentStep(ctx.sessionId, nextSeq(ctx.sessionId), step);

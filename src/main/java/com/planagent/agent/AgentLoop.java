@@ -23,6 +23,7 @@ public class AgentLoop {
 
     private final ChatLanguageModel primaryModel;
     private final ChatLanguageModel fallbackModel;
+    private final ChatLanguageModel deepThinkingModel;
     private final ToolRegistry toolRegistry;
 
     private static final String SYSTEM_PROMPT = """
@@ -44,17 +45,22 @@ public class AgentLoop {
 
     public AgentLoop(@Qualifier("primaryModel") ChatLanguageModel primaryModel,
                      @Qualifier("fallbackModel") ChatLanguageModel fallbackModel,
+                     @Qualifier("deepThinkingModel") ChatLanguageModel deepThinkingModel,
                      ToolRegistry toolRegistry) {
         this.primaryModel = primaryModel;
         this.fallbackModel = fallbackModel;
+        this.deepThinkingModel = deepThinkingModel;
         this.toolRegistry = toolRegistry;
     }
 
     public Flux<AgentStep> execute(SessionContext ctx, String userGoal) {
+        return execute(ctx, userGoal, false);
+    }
+
+    public Flux<AgentStep> execute(SessionContext ctx, String userGoal, boolean deepThinking) {
         return Flux.create(sink -> {
             List<ChatMessage> messages = new ArrayList<>();
             messages.add(SystemMessage.from(SYSTEM_PROMPT));
-            // Replay previous conversation history for context
             for (ChatMessage msg : ctx.conversationHistory) {
                 if (!(msg instanceof SystemMessage)) {
                     messages.add(msg);
@@ -63,7 +69,7 @@ public class AgentLoop {
             messages.add(UserMessage.from(userGoal));
 
             var specs = toolRegistry.getSpecifications();
-            ChatLanguageModel model = primaryModel;
+            ChatLanguageModel model = deepThinking ? deepThinkingModel : primaryModel;
 
             for (int round = 0; round < MAX_ROUNDS; round++) {
                 try {
@@ -79,6 +85,7 @@ public class AgentLoop {
                         if (thought != null && !thought.isBlank()) {
                             sink.next(AgentStep.thought(thought));
                         }
+                        messages.add(aiMessage);
 
                         for (var req : aiMessage.toolExecutionRequests()) {
                             sink.next(AgentStep.action(req.name(), req.arguments()));
@@ -86,7 +93,6 @@ public class AgentLoop {
                             String result = toolRegistry.execute(req);
                             sink.next(AgentStep.observation(result));
 
-                            messages.add(aiMessage);
                             messages.add(ToolExecutionResultMessage.from(req, result));
                         }
                     } else {

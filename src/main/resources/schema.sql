@@ -1,6 +1,3 @@
--- 对话历史存储
--- 数据库需手动创建: CREATE DATABASE IF NOT EXISTS plan_agent DEFAULT CHARACTER SET utf8mb4;
-
 CREATE TABLE IF NOT EXISTS sessions (
     id           BIGINT       AUTO_INCREMENT PRIMARY KEY,
     session_id   VARCHAR(64)  NOT NULL UNIQUE,
@@ -20,3 +17,6 @@ CREATE TABLE IF NOT EXISTS messages (
     tool_params  VARCHAR(2000),
     created_at   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_session_seq ON messages(session_id, seq);
+CREATE INDEX IF NOT EXISTS idx_created ON sessions(created_at);
