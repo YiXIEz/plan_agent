@@ -7,177 +7,201 @@
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
 :root {
-  --blue: #1677ff;
-  --blue-light: #e6f4ff;
-  --green: #52c41a;
-  --green-light: #f6ffed;
-  --green-border: #b7eb8f;
-  --gold: #faad14;
-  --gold-light: #fffbe6;
-  --gold-border: #ffe58f;
-  --red: #ff4d4f;
-  --red-light: #fff2f0;
-  --red-border: #ffccc7;
-  --gray: #8c8c8c;
-  --gray-light: #fafafa;
-  --border: #f0f0f0;
-  --text: #1f1f1f;
-  --text-secondary: #666;
+  --primary: #1677ff;
+  --primary-bg: #e6f4ff;
+  --success: #52c41a;
+  --success-bg: #f6ffed;
+  --warning: #faad14;
+  --warning-bg: #fffbe6;
+  --error: #ff4d4f;
+  --error-bg: #fff2f0;
+  --text: rgba(0,0,0,0.88);
+  --text-secondary: rgba(0,0,0,0.65);
+  --text-tertiary: rgba(0,0,0,0.45);
+  --text-disabled: rgba(0,0,0,0.25);
+  --bg-elevated: #fff;
+  --bg-layout: #f5f5f5;
+  --bg-container: rgba(0,0,0,0.02);
+  --bg-hover: rgba(0,0,0,0.04);
+  --bg-active: rgba(0,0,0,0.06);
+  --border: rgba(0,0,0,0.06);
+  --border-light: rgba(0,0,0,0.04);
+  --radius-sm: 6px;
   --radius: 8px;
+  --radius-lg: 12px;
+  --shadow: 0 1px 2px rgba(0,0,0,0.03), 0 1px 6px -1px rgba(0,0,0,0.02), 0 2px 4px rgba(0,0,0,0.02);
 }
 * { margin:0; padding:0; box-sizing:border-box; }
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  background: #f5f5f5; height: 100vh; display: flex; justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  font-size: 14px; line-height: 1.5715; color: var(--text); background: var(--bg-layout);
+  height: 100vh; display: flex; justify-content: center;
 }
 
 /* ── Layout ── */
 #app {
-  width: 100%; max-width: 960px; height: 100vh; display: flex; background: #fff;
+  width: 100%; max-width: 960px; height: 100vh; display: flex; background: var(--bg-elevated);
+  box-shadow: var(--shadow);
 }
+
+/* ── Sidebar ── */
 #sidebar {
-  width: 240px; background: #fafafa; border-right: 1px solid var(--border);
+  width: 260px; background: var(--bg-container); border-right: 1px solid var(--border);
   display: flex; flex-direction: column; flex-shrink: 0;
 }
-#sidebar h3 { padding: 18px 16px 12px; font-size: 15px; font-weight: 600; }
-#sidebar .btn-new {
-  margin: 0 12px 12px; padding: 8px 0; background: var(--blue); color: #fff;
-  border: none; border-radius: 6px; font-size: 13px; cursor: pointer;
+#sidebar .s-head {
+  padding: 20px 16px 10px; font-size: 16px; font-weight: 600; color: var(--text);
+  display: flex; align-items: center; gap: 8px;
 }
-#sidebar .convos { flex:1; overflow-y:auto; padding: 0 8px; }
-#sidebar .convo {
-  padding: 10px 12px; margin: 2px 0; border-radius: 6px; cursor: pointer;
-  font-size: 13px; color: var(--text-secondary); transition: background 0.15s;
-  display: flex; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+#sidebar .s-add {
+  margin: 0 12px 12px; padding: 8px 0; background: var(--primary); color: #fff;
+  border: none; border-radius: var(--radius); font-size: 14px; cursor: pointer;
+  transition: opacity 0.2s;
 }
-#sidebar .convo:hover { background: #f0f0f0; }
-#sidebar .convo.active { background: var(--blue-light); color: var(--blue); font-weight: 500; }
+#sidebar .s-add:hover { opacity: 0.85; }
+#sidebar .s-list { flex:1; overflow-y:auto; padding: 4px 8px; }
+#sidebar .s-item {
+  padding: 10px 12px; margin: 1px 0; border-radius: var(--radius);
+  font-size: 14px; color: var(--text-secondary); cursor: pointer;
+  transition: background 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#sidebar .s-item:hover { background: var(--bg-hover); }
+#sidebar .s-item.active { background: var(--primary-bg); color: var(--primary); }
+
+/* ── Main chat ── */
 #main { flex:1; display:flex; flex-direction:column; min-width:0; }
-#messages { flex:1; overflow-y:auto; padding: 20px 24px; }
+#status { padding: 8px 24px; font-size: 12px; color: var(--text-tertiary); border-bottom: 1px solid var(--border-light); }
+#messages { flex:1; overflow-y:auto; padding: 24px; }
 #messages:empty::after {
-  content: "✨ 输入你想安排的活动，AI 助手为你规划完整方案";
+  content: "输入你想安排的活动，AI 助手为你规划完整方案 ✨";
   display: flex; align-items: center; justify-content: center; height: 100%;
-  color: #bbb; font-size: 15px;
+  color: var(--text-disabled); font-size: 15px; text-align: center; padding: 40px;
 }
 
-/* ── Status bar ── */
-#status {
-  padding: 6px 24px; font-size: 12px; color: var(--text-secondary);
-  display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--border);
-}
-.dot { width: 7px; height: 7px; border-radius: 50%; }
-.dot.online { background: var(--green); }
-.dot.thinking { background: var(--gold); animation: blink 1s infinite; }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+/* ── Animations ── */
+.msg { animation: fadeIn 0.2s ease; margin-bottom: 20px; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+@keyframes cursor-blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+.dot.on { background: var(--success); }
+.dot.busy { background: var(--warning); animation: cursor-blink 0.8s infinite; }
 
-/* ── Messages ── */
-.msg { margin-bottom: 18px; animation: fadeIn 0.2s ease; }
-@keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
-
-/* User bubble */
-.msg-user { display: flex; justify-content: flex-end; }
-.msg-user .bubble {
-  background: var(--blue); color: #fff; padding: 10px 16px; border-radius: 16px 16px 4px 16px;
-  max-width: 70%; line-height: 1.5; font-size: 14px; word-break: break-word;
+/* ── User bubble ── */
+.msg.user { display: flex; justify-content: flex-end; }
+.msg.user .bubble {
+  max-width: 75%; background: var(--primary); color: #fff; padding: 10px 16px;
+  border-radius: 16px 16px 4px 16px; font-size: 14px; line-height: 1.5715; word-break: break-word;
+  box-shadow: 0 2px 8px rgba(22,119,255,0.15);
 }
 
 /* ── ThoughtChain ── */
-.thought-chain { padding: 4px 0; }
-.tc-item { display: flex; gap: 12px; padding: 6px 0; }
-.tc-item:last-child { padding-bottom: 0; }
-.tc-icon {
-  width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  font-size: 15px; flex-shrink: 0; position: relative; z-index: 1;
+.chain { position: relative; padding-left: 32px; }
+.chain::before {
+  content: ''; position: absolute; left: 14px; top: 8px; bottom: 8px;
+  width: 1px; border-left: 2px dashed rgba(0,0,0,0.12);
 }
-.tc-item:not(:last-child) .tc-icon::after {
-  content: ''; position: absolute; top: 32px; left: 50%; transform: translateX(-50%);
-  width: 2px; height: calc(100% + 6px); background: #e8e8e8;
+.chain .step { position: relative; margin-bottom: 16px; }
+.chain .step:last-child { margin-bottom: 0; }
+.chain .step .s-icon {
+  position: absolute; left: -24px; top: 2px;
+  width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; z-index: 1;
 }
-.tc-icon.thought { background: #fff7e6; color: var(--gold); }
-.tc-icon.action { background: var(--blue-light); color: var(--blue); }
-.tc-icon.obs { background: var(--green-light); color: var(--green); }
-.tc-body { flex:1; min-width:0; }
-.tc-title { font-size: 12px; color: var(--text-secondary); margin-bottom: 2px; }
-.tc-content { font-size: 14px; line-height: 1.6; color: var(--text); word-break: break-word; }
-.tc-content.thought-text { color: var(--text-secondary); font-style: italic; }
-.tc-tool {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: var(--blue-light); border: 1px solid #91caff; border-radius: 4px;
-  padding: 2px 10px; font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
-  font-size: 13px; color: var(--blue);
+.chain .step .s-icon.think { background: var(--warning-bg); border: 1px solid rgba(250,173,20,0.3); }
+.chain .step .s-icon.tool { background: var(--primary-bg); border: 1px solid rgba(22,119,255,0.3); }
+.chain .step .s-icon.obs { background: var(--success-bg); border: 1px solid rgba(82,196,26,0.3); }
+.chain .step .s-title { font-size: 12px; color: var(--text-tertiary); margin-bottom: 4px; font-weight: 500; }
+.chain .step .s-body { font-size: 14px; line-height: 1.5715; color: var(--text); }
+.chain .step .s-body.think-body { color: var(--text-secondary); font-style: italic; }
+.chain .step .s-tag {
+  display: inline-flex; align-items: center; background: var(--primary-bg); color: var(--primary);
+  border: 1px solid rgba(22,119,255,0.2); border-radius: 4px; padding: 1px 8px;
+  font-family: "SF Mono", "Cascadia Code", monospace; font-size: 13px; font-weight: 500;
 }
-.tc-obs {
-  background: var(--green-light); border: 1px solid var(--green-border);
-  border-radius: 6px; padding: 6px 10px; max-height: 160px; overflow-y: auto;
-  white-space: pre-wrap; font-family: "SF Mono", monospace; font-size: 12px; color: #389e0d;
+.chain .step .s-json {
+  margin-top: 4px; background: var(--success-bg); border: 1px solid rgba(82,196,26,0.2);
+  border-radius: var(--radius-sm); padding: 8px 12px; max-height: 160px; overflow-y: auto;
+  font-family: "SF Mono", monospace; font-size: 12px; color: #389e0d; white-space: pre-wrap;
 }
 
 /* ── Plan card ── */
-.plan-card {
-  background: var(--gold-light); border: 1px solid var(--gold-border);
-  border-radius: 10px; padding: 18px 20px; margin: 8px 0;
-  line-height: 1.7; font-size: 14px;
+.plan {
+  background: var(--warning-bg); border: 1px solid rgba(250,173,20,0.3);
+  border-radius: var(--radius-lg); padding: 20px 24px; font-size: 14px; line-height: 1.7;
 }
-.plan-card h1,.plan-card h2,.plan-card h3 { margin: 10px 0 6px; font-size: 15px; }
-.plan-card p { margin: 4px 0; }
-.plan-card ul,.plan-card ol { padding-left: 20px; margin: 6px 0; }
-.plan-card code { background: rgba(0,0,0,0.05); padding: 2px 5px; border-radius: 4px; font-size: 13px; }
-.plan-card pre { background: rgba(0,0,0,0.03); padding: 10px; border-radius: 8px; overflow-x: auto; margin: 8px 0; }
-.plan-card table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 13px; }
-.plan-card th,.plan-card td { border: 1px solid #e8d5a0; padding: 8px 12px; text-align: left; }
-.plan-card th { background: #fff3cd; }
-.plan-card blockquote { border-left: 3px solid var(--gold-border); padding-left: 12px; color: #888; margin: 8px 0; }
-.plan-card hr { border: none; border-top: 1px solid #f0e0a0; margin: 12px 0; }
-.plan-actions { display: flex; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #f0e0a0; }
+.plan h1,.plan h2,.plan h3,.plan h4 { margin: 12px 0 6px; font-size: 15px; font-weight: 600; }
+.plan p { margin: 4px 0; }
+.plan ul,.plan ol { padding-left: 22px; margin: 6px 0; }
+.plan li { margin: 2px 0; }
+.plan code { background: rgba(0,0,0,0.06); padding: 2px 6px; border-radius: 4px; font-size: 13px; font-family: "SF Mono", monospace; }
+.plan pre { background: rgba(0,0,0,0.03); padding: 10px 14px; border-radius: var(--radius); overflow-x: auto; margin: 8px 0; font-size: 13px; }
+.plan pre code { background: none; padding: 0; }
+.plan table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 13px; }
+.plan th,.plan td { border: 1px solid rgba(0,0,0,0.08); padding: 8px 12px; text-align: left; }
+.plan th { background: rgba(0,0,0,0.03); font-weight: 600; }
+.plan blockquote { border-left: 3px solid rgba(250,173,20,0.4); padding-left: 12px; color: var(--text-secondary); margin: 8px 0; }
+.plan strong { font-weight: 600; }
+.plan hr { border: none; border-top: 1px solid rgba(0,0,0,0.06); margin: 14px 0; }
+.plan-actions { display: flex; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(0,0,0,0.06); }
 .plan-actions button {
-  padding: 7px 18px; border-radius: 6px; cursor: pointer; border: none; font-size: 14px; font-weight: 500;
+  padding: 8px 20px; border-radius: var(--radius); font-size: 14px; font-weight: 500; cursor: pointer;
+  transition: all 0.2s; border: none;
 }
-.btn-confirm { background: var(--blue); color: #fff; }
-.btn-confirm:hover { opacity: 0.85; }
-.btn-adjust { background: #fff; color: var(--text); border: 1px solid #d9d9d9 !important; }
-.btn-adjust:hover { border-color: var(--blue) !important; color: var(--blue); }
+.plan-actions .btn-ok { background: var(--primary); color: #fff; box-shadow: 0 2px 0 rgba(0,0,0,0.02); }
+.plan-actions .btn-ok:hover { opacity: 0.85; }
+.plan-actions .btn-no { background: #fff; color: var(--text); border: 1px solid rgba(0,0,0,0.15) !important; }
+.plan-actions .btn-no:hover { color: var(--primary); border-color: var(--primary) !important; }
 
-/* Done / Error */
-.done-msg, .error-msg { padding: 12px 16px; border-radius: 8px; font-size: 14px; margin: 8px 0; }
-.done-msg { background: var(--green-light); border: 1px solid var(--green-border); text-align: center; }
-.error-msg { background: var(--red-light); border: 1px solid var(--red-border); color: var(--red); }
+/* ── Done / Error / Confirm ── */
+.done {
+  background: var(--success-bg); border: 1px solid rgba(82,196,26,0.3);
+  border-radius: var(--radius); padding: 12px 20px; font-size: 15px; text-align: center; color: var(--success);
+}
+.err {
+  background: var(--error-bg); border: 1px solid rgba(255,77,79,0.2);
+  border-radius: var(--radius); padding: 10px 16px; color: var(--error); font-size: 14px;
+}
+.confirming { font-size: 13px; color: var(--warning); padding: 6px 0; }
 
 /* ── Input ── */
-#input-area {
-  padding: 14px 24px; border-top: 1px solid var(--border);
-  display: flex; gap: 10px; background: #fff;
-}
+#input-area { padding: 16px 24px; border-top: 1px solid var(--border-light); display: flex; gap: 10px; background: var(--bg-elevated); }
 #input-area input {
-  flex: 1; padding: 10px 16px; border: 1px solid #d9d9d9; border-radius: 8px;
-  font-size: 14px; outline: none; transition: border-color 0.2s;
+  flex: 1; padding: 10px 16px; border: 1px solid rgba(0,0,0,0.15); border-radius: var(--radius);
+  font-size: 14px; outline: none; color: var(--text); transition: border 0.2s, box-shadow 0.2s;
 }
-#input-area input:focus { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(22,119,255,0.1); }
+#input-area input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(22,119,255,0.1); }
+#input-area input::placeholder { color: var(--text-disabled); }
 #input-area button {
-  padding: 10px 22px; background: var(--blue); color: #fff; border: none;
-  border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer;
+  padding: 10px 24px; background: var(--primary); color: #fff; border: none;
+  border-radius: var(--radius); font-size: 14px; font-weight: 500; cursor: pointer;
+  transition: opacity 0.2s; white-space: nowrap;
 }
 #input-area button:hover { opacity: 0.85; }
-#input-area button:disabled { background: #91caff; cursor: not-allowed; }
+#input-area button:disabled { background: #91caff; cursor: not-allowed; opacity: 1; }
 
-@media (max-width: 640px) {
+/* ── Status dot ── */
+.status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+.status-dot.ok { background: var(--success); }
+.status-dot.busy { background: var(--warning); animation: cursor-blink 0.8s infinite; }
+
+/* ── Responsive ── */
+@media (max-width: 720px) {
   #sidebar { display: none; }
-  #messages { padding: 14px 16px; }
-  #input-area { padding: 10px 16px; }
+  #messages { padding: 16px; }
+  #input-area { padding: 10px 14px; }
 }
 </style>
 </head>
 <body>
 <div id="app">
-  <!-- Sidebar -->
   <div id="sidebar">
-    <h3>🤖 活动规划助手</h3>
-    <button class="btn-new" onclick="location.reload()">+ 新对话</button>
-    <div class="convos" id="convoList"></div>
+    <div class="s-head">🤖 活动规划助手</div>
+    <button class="s-add" onclick="location.reload()">+ 新对话</button>
+    <div class="s-list" id="convoList"></div>
   </div>
 
-  <!-- Main -->
   <div id="main">
-    <div id="status"><span class="dot online"></span> 就绪</div>
+    <div id="status"><span class="status-dot ok"></span>就绪</div>
     <div id="messages"></div>
     <div id="input-area">
       <input type="text" id="userInput" placeholder="输入你想安排的活动..." autofocus>
@@ -187,122 +211,130 @@ body {
 </div>
 
 <script>
-let ws, planning = false, roundBuf = [];
+let ws, planning = false, round = [];
 
 marked.setOptions({ breaks: true, gfm: true });
 
-function connect() {
-  ws = new WebSocket('ws://' + location.host + '/ws/chat');
-  ws.onmessage = e => render(JSON.parse(e.data));
-  ws.onclose = () => { planning = false; setStatus('offline'); };
-  ws.onerror = () => { planning = false; setStatus('offline'); };
+function setStatus(s) {
+  const m = { ok:'就绪', busy:'Agent 思考中...', off:'连接断开' };
+  document.getElementById('status').innerHTML =
+    '<span class="status-dot '+s+'"></span>'+m[s];
 }
 
-function setStatus(s) {
-  const m = { online:'就绪', thinking:'Agent 思考中...', offline:'连接断开' };
-  document.getElementById('status').innerHTML = '<span class="dot '+s+'"></span> '+m[s];
+function connect() {
+  ws = new WebSocket('ws://'+location.host+'/ws/chat');
+  ws.onmessage = e => {
+    const s = JSON.parse(e.data);
+    render(s);
+  };
+  ws.onclose = () => { planning=false; setStatus('off'); };
+  ws.onerror = () => { planning=false; setStatus('off'); };
 }
 
 function sendMessage() {
-  const input = document.getElementById('userInput'), text = input.value.trim();
-  if (!text || planning) return;
+  const el = document.getElementById('userInput'), t = el.value.trim();
+  if (!t || planning) return;
   planning = true;
   document.getElementById('sendBtn').disabled = true;
-  setStatus('thinking');
-  addUserMsg(text);
-  addToSidebar(text);
-  input.value = '';
-  ws.send(JSON.stringify({ content: text }));
+  setStatus('busy');
+  addUser(t);
+  sidebarAdd(t);
+  el.value = '';
+  ws.send(JSON.stringify({ content: t }));
 }
 
-function render(step) {
-  switch (step.type) {
-    case 'THOUGHT': roundBuf = []; fallthrough(step); break;
-    case 'ACTION': case 'OBSERVATION': roundBuf.push(step);
-      if (step.type === 'OBSERVATION') { addThoughtChain(roundBuf); roundBuf = []; }
-      break;
-    case 'FINAL_PLAN': addPlanCard(step.content); break;
-    case 'CONFIRMING': addConfirming(step.content); break;
-    case 'DONE': addDone(step.content); break;
-    case 'ERROR': addError(step.content); break;
-  }
-  document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
-}
-
-function fallthrough(step) {
-  // Add the THOUGHT as first item
-}
-
-// ── Renderers ──
-
-function addUserMsg(text) {
-  const d = ce('div', 'msg msg-user');
-  d.innerHTML = '<div class="bubble">'+esc(text)+'</div>';
+function addUser(t) {
+  const d = document.createElement('div');
+  d.className = 'msg user';
+  d.innerHTML = '<div class="bubble">'+esc(t)+'</div>';
   document.getElementById('messages').appendChild(d);
+  scroll();
 }
 
-function addThoughtChain(steps) {
-  const d = ce('div', 'msg thought-chain');
-  let html = '';
+function render(s) {
+  switch (s.type) {
+    case 'THOUGHT': round = [{ type:'THOUGHT', content:s.content }]; break;
+    case 'ACTION': round.push({ type:'ACTION', tool:s.tool, params:s.params }); break;
+    case 'OBSERVATION':
+      round.push({ type:'OBSERVATION', content:s.content });
+      addChain(round); round = []; break;
+    case 'FINAL_PLAN': addPlan(s.content); break;
+    case 'CONFIRMING': addMsg('confirming', '⏳ '+s.content); break;
+    case 'DONE': addDone(s.content); break;
+    case 'ERROR': addErr(s.content); break;
+  }
+  scroll();
+}
+
+function scroll() {
+  const m = document.getElementById('messages');
+  m.scrollTop = m.scrollHeight;
+}
+
+// ── ThoughtChain ──
+function addChain(steps) {
+  const d = document.createElement('div');
+  d.className = 'msg chain';
+  let h = '';
   steps.forEach((s, i) => {
     if (s.type === 'THOUGHT') {
-      html += tcItem('thought', '💡', '思考', '<span class="tc-content thought-text">'+esc(s.content)+'</span>');
+      h += '<div class="step"><div class="s-icon think">💡</div><div class="s-title">思考</div><div class="s-body think-body">'+esc(s.content)+'</div></div>';
     } else if (s.type === 'ACTION') {
-      const params = s.params ? trunc(esc(s.params), 80) : '';
-      html += tcItem('action', '🔧', '调用工具', '<span class="tc-tool">'+esc(s.tool)+'</span> '+params);
+      const p = s.params ? ' <span style="color:var(--text-secondary);font-size:13px">'+trunc(esc(s.params),60)+'</span>' : '';
+      h += '<div class="step"><div class="s-icon tool">🔧</div><div class="s-title">调用工具</div><div class="s-body"><span class="s-tag">'+esc(s.tool)+'</span>'+p+'</div></div>';
     } else if (s.type === 'OBSERVATION') {
-      html += tcItem('obs', '👁️', '返回结果', '<div class="tc-obs">'+esc(fmtJson(s.content))+'</div>');
+      h += '<div class="step"><div class="s-icon obs">👁</div><div class="s-title">返回结果</div><div class="s-body"><div class="s-json">'+esc(fmtJson(s.content))+'</div></div></div>';
     }
   });
-  d.innerHTML = html;
+  d.innerHTML = h;
   document.getElementById('messages').appendChild(d);
 }
 
-function tcItem(cls, icon, title, content) {
-  return '<div class="tc-item"><div class="tc-icon '+cls+'">'+icon+'</div><div class="tc-body"><div class="tc-title">'+title+'</div>'+content+'</div></div>';
-}
-
-function addPlanCard(content) {
-  const d = ce('div', 'msg');
+// ── Plan ──
+function addPlan(content) {
+  const d = document.createElement('div');
+  d.className = 'msg';
   const html = marked.parse(content);
-  d.innerHTML = '<div class="plan-card"><div class="plan-content">'+html+'</div>'+
+  d.innerHTML = '<div class="plan">'+html+
     '<div class="plan-actions">'+
-    '<button class="btn-confirm" onclick="confirmPlan()">✓ 确认方案</button>'+
-    '<button class="btn-adjust" onclick="adjustPlan()">↩ 调整方案</button>'+
+    '<button class="btn-ok" onclick="confirmPlan()">✓ 确认方案</button>'+
+    '<button class="btn-no" onclick="adjustPlan()">调整方案</button>'+
     '</div></div>';
   document.getElementById('messages').appendChild(d);
-  endPlanning();
+  endPlan();
 }
 
-function addConfirming(text) {
-  document.getElementById('messages').appendChild(ceMsg('', '⏳ '+text, 'color:#faad14;font-size:13px;padding:6px 0'));
-}
-
-function addDone(text) {
-  const d = ce('div', 'msg');
-  d.innerHTML = '<div class="done-msg">🎉 '+esc(text)+'</div>';
+function addDone(t) {
+  const d = document.createElement('div');
+  d.className = 'msg'; d.innerHTML = '<div class="done">🎉 '+esc(t)+'</div>';
   document.getElementById('messages').appendChild(d);
-  endPlanning();
+  endPlan();
 }
 
-function addError(text) {
-  const d = ce('div', 'msg');
-  d.innerHTML = '<div class="error-msg">❌ '+esc(text)+'</div>';
+function addErr(t) {
+  const d = document.createElement('div');
+  d.className = 'msg'; d.innerHTML = '<div class="err">❌ '+esc(t)+'</div>';
   document.getElementById('messages').appendChild(d);
-  endPlanning();
+  endPlan();
 }
 
-function endPlanning() {
+function addMsg(c, t) {
+  const d = document.createElement('div');
+  d.className = 'msg '+c; d.textContent = t;
+  document.getElementById('messages').appendChild(d);
+}
+
+function endPlan() {
   planning = false;
   document.getElementById('sendBtn').disabled = false;
-  setStatus('online');
+  setStatus('ok');
 }
 
 function confirmPlan() {
   ws.send(JSON.stringify({ type:'confirm', content:'确认执行此方案' }));
   planning = true;
   document.getElementById('sendBtn').disabled = true;
-  setStatus('thinking');
+  setStatus('busy');
 }
 
 function adjustPlan() {
@@ -310,25 +342,19 @@ function adjustPlan() {
   el.value = '请调整方案：'; el.focus();
 }
 
-function addToSidebar(title) {
+function sidebarAdd(title) {
   const list = document.getElementById('convoList');
+  list.querySelectorAll('.s-item').forEach(c => c.classList.remove('active'));
   const div = document.createElement('div');
-  div.className = 'convo active';
-  div.textContent = trunc(title, 18);
-  list.querySelectorAll('.convo').forEach(c => c.classList.remove('active'));
+  div.className = 's-item active';
+  div.textContent = trunc(title, 20);
   list.insertBefore(div, list.firstChild);
 }
 
-// ── Helpers ──
-
-function ce(tag, cls) { const e = document.createElement(tag); if(cls) e.className = cls; return e; }
-function ceMsg(cls, html, style) {
-  const d = document.createElement('div'); d.className = 'msg '+cls;
-  d.innerHTML = style ? '<div style="'+style+'">'+html+'</div>' : html; return d;
-}
-function esc(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
-function trunc(s, n) { return s&&s.length>n ? s.slice(0,n)+'...' : s||''; }
-function fmtJson(s) { try{ return JSON.stringify(JSON.parse(s),null,2); }catch(e){ return s; } }
+// ── helpers ──
+function esc(s) { const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+function trunc(s,n) { return s&&s.length>n ? s.slice(0,n)+'...' : s||''; }
+function fmtJson(s) { try{ return JSON.stringify(JSON.parse(s),null,2); } catch(e){ return s; } }
 
 document.getElementById('userInput').addEventListener('keydown', e => { if(e.key==='Enter') sendMessage(); });
 connect();
