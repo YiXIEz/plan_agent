@@ -85,6 +85,7 @@ public class AgentLoop {
                         if (thought != null && !thought.isBlank()) {
                             sink.next(AgentStep.thought(thought));
                         }
+                        messages.add(aiMessage);
 
                         for (var req : aiMessage.toolExecutionRequests()) {
                             sink.next(AgentStep.action(req.name(), req.arguments()));
@@ -92,7 +93,6 @@ public class AgentLoop {
                             String result = toolRegistry.execute(req);
                             sink.next(AgentStep.observation(result));
 
-                            messages.add(aiMessage);
                             messages.add(ToolExecutionResultMessage.from(req, result));
                         }
                     } else {
