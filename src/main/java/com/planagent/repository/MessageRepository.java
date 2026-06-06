@@ -21,8 +21,8 @@ public class MessageRepository {
 
     public void createSession(String sessionId, String title) {
         jdbc.update(
-            "INSERT INTO sessions (session_id, title) VALUES (?, ?) ON DUPLICATE KEY UPDATE title=?, updated_at=NOW()",
-            sessionId, title, title);
+            "MERGE INTO sessions (session_id, title, updated_at) KEY(session_id) VALUES (?, ?, CURRENT_TIMESTAMP)",
+            sessionId, title);
     }
 
     public void saveUserMessage(String sessionId, int seq, String content) {
