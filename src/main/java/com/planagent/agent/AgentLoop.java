@@ -18,7 +18,7 @@ import java.util.*;
 @Component
 public class AgentLoop {
     private static final Logger log = LoggerFactory.getLogger(AgentLoop.class);
-    private static final int MAX_ROUNDS = 10;
+    private static final int MAX_ROUNDS = 15;
     private static final ObjectMapper mapper = new ObjectMapper();
 
     private final ChatLanguageModel primaryModel;
@@ -50,10 +50,16 @@ public class AgentLoop {
         this.toolRegistry = toolRegistry;
     }
 
-    public Flux<AgentStep> execute(String userGoal) {
+    public Flux<AgentStep> execute(SessionContext ctx, String userGoal) {
         return Flux.create(sink -> {
             List<ChatMessage> messages = new ArrayList<>();
             messages.add(SystemMessage.from(SYSTEM_PROMPT));
+            // Replay previous conversation history for context
+            for (ChatMessage msg : ctx.conversationHistory) {
+                if (!(msg instanceof SystemMessage)) {
+                    messages.add(msg);
+                }
+            }
             messages.add(UserMessage.from(userGoal));
 
             var specs = toolRegistry.getSpecifications();
@@ -84,7 +90,9 @@ public class AgentLoop {
                             messages.add(ToolExecutionResultMessage.from(req, result));
                         }
                     } else {
+                        messages.add(aiMessage);
                         sink.next(AgentStep.finalPlan(aiMessage.text()));
+                        ctx.conversationHistory = new ArrayList<>(messages);
                         sink.complete();
                         return;
                     }
@@ -96,12 +104,14 @@ public class AgentLoop {
                         sink.next(AgentStep.error("主模型异常，已切换到备用模型"));
                         round--;
                     } else {
+                        ctx.conversationHistory = new ArrayList<>(messages);
                         sink.next(AgentStep.error("规划失败: " + e.getMessage()));
                         sink.complete();
                         return;
                     }
                 }
             }
+            ctx.conversationHistory = new ArrayList<>(messages);
             sink.next(AgentStep.error("超过最大规划轮数"));
             sink.complete();
         });

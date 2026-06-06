@@ -1,6 +1,7 @@
 package com.planagent.tools;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.planagent.amap.AmapClient;
 import com.planagent.mock.MockDataStore;
 import org.springframework.stereotype.Component;
 import java.util.List;
@@ -11,7 +12,7 @@ public class RestaurantSearchTool {
     private final ObjectMapper mapper = new ObjectMapper();
 
     @SuppressWarnings("unchecked")
-    public RestaurantSearchTool(ToolRegistry registry, MockDataStore store) {
+    public RestaurantSearchTool(ToolRegistry registry, MockDataStore store, AmapClient amapClient) {
         registry.register("search_restaurants",
             "搜索符合条件的餐厅",
             Map.of(
@@ -26,6 +27,10 @@ public class RestaurantSearchTool {
                 List<String> tags = node.has("tags") ? mapper.convertValue(node.get("tags"), List.class) : null;
                 String budget = node.has("budget") ? node.get("budget").asText() : null;
                 boolean kidFriendly = node.has("kidFriendly") && node.get("kidFriendly").asBoolean();
+                if (amapClient.isEnabled()) {
+                    var result = amapClient.searchRestaurants(keyword, tags, budget, kidFriendly);
+                    if (result != null) return mapper.writeValueAsString(result);
+                }
                 var results = store.searchRestaurants(keyword, tags, budget, kidFriendly);
                 return mapper.writeValueAsString(results);
             });

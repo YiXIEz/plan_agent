@@ -4,45 +4,199 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>周末活动规划助手</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; height: 100vh; display: flex; justify-content: center; align-items: center; }
-#app { width: 100%; max-width: 700px; height: 90vh; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
-#header { padding: 16px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fff; }
-#header h1 { font-size: 18px; color: #333; }
-#header button { padding: 6px 14px; border: 1px solid #ddd; border-radius: 6px; background: #fff; cursor: pointer; font-size: 13px; }
-#messages { flex: 1; overflow-y: auto; padding: 16px 20px; }
-.msg { margin-bottom: 12px; max-width: 85%; line-height: 1.6; }
-.msg.user { margin-left: auto; background: #1677ff; color: #fff; padding: 10px 14px; border-radius: 10px 10px 0 10px; }
-.msg.thought { color: #888; font-size: 13px; font-style: italic; padding: 4px 0; }
-.msg.action { color: #1677ff; font-size: 13px; font-family: monospace; background: #f0f5ff; padding: 6px 10px; border-radius: 6px; }
-.msg.observation { color: #52c41a; font-size: 13px; background: #f6ffed; padding: 8px 12px; border-radius: 6px; white-space: pre-wrap; }
-.msg.plan { background: #fffbe6; border: 1px solid #ffe58f; padding: 14px 16px; border-radius: 8px; }
-.msg.plan h3 { margin-bottom: 8px; }
-.msg.plan .actions { margin-top: 10px; display: flex; gap: 8px; }
-.msg.plan .actions button { padding: 6px 16px; border-radius: 6px; cursor: pointer; border: none; font-size: 14px; }
-.btn-confirm { background: #1677ff; color: #fff; }
-.btn-adjust { background: #fff; border: 1px solid #d9d9d9 !important; color: #333; }
-.msg.done { background: #f6ffed; border: 1px solid #b7eb8f; padding: 12px 14px; border-radius: 8px; }
-.msg.error { color: #ff4d4f; background: #fff2f0; padding: 8px 12px; border-radius: 6px; }
-.msg.confirming { color: #faad14; font-size: 13px; }
-.msg.loading { color: #bbb; font-size: 13px; }
-#input-area { padding: 12px 20px; border-top: 1px solid #eee; display: flex; gap: 8px; }
-#input-area input { flex: 1; padding: 10px 14px; border: 1px solid #d9d9d9; border-radius: 8px; font-size: 14px; outline: none; }
-#input-area input:focus { border-color: #1677ff; }
-#input-area button { padding: 10px 20px; background: #1677ff; color: #fff; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; }
-#input-area button:disabled { background: #b3d4ff; cursor: not-allowed; }
+:root {
+  --bg: #f8f9fb;
+  --surface: #ffffff;
+  --border: #e8ecf1;
+  --text: #1a1d23;
+  --text-secondary: #6b7280;
+  --primary: #4f6ef7;
+  --primary-light: #eef1fe;
+  --thought-bg: #f5f5f7;
+  --thought-text: #86868b;
+  --action-bg: #eef1fe;
+  --action-text: #4f6ef7;
+  --obs-bg: #f0faf5;
+  --obs-text: #2d8a56;
+  --plan-bg: #fffbeb;
+  --plan-border: #fcd34d;
+  --error-bg: #fef2f2;
+  --error-text: #dc2626;
+  --done-bg: #f0faf5;
+  --done-border: #86efac;
+  --user-bubble: #4f6ef7;
+  --radius: 12px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  background: var(--bg); color: var(--text); height: 100vh; display: flex; justify-content: center;
+}
+#app {
+  width: 100%; max-width: 820px; height: 100vh; display: flex; flex-direction: column;
+  background: var(--surface); box-shadow: var(--shadow);
+}
+#header {
+  padding: 16px 24px; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center; background: var(--surface);
+  position: sticky; top: 0; z-index: 10;
+}
+#header h1 { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+#header .actions { display: flex; gap: 8px; }
+#header button {
+  padding: 7px 16px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface); cursor: pointer; font-size: 13px; color: var(--text-secondary);
+  transition: all 0.15s;
+}
+#header button:hover { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
+#messages { flex: 1; overflow-y: auto; padding: 20px 24px; scroll-behavior: smooth; }
+#messages:empty::after {
+  content: "输入你想安排的活动，AI 助手会为你规划完整的下午方案 ✨";
+  display: flex; align-items: center; justify-content: center;
+  height: 100%; color: var(--text-secondary); font-size: 15px; text-align: center; padding: 40px;
+}
+.msg { margin-bottom: 16px; animation: fadeIn 0.25s ease; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+/* User message */
+.msg.user {
+  display: flex; justify-content: flex-end;
+}
+.msg.user .bubble {
+  background: var(--user-bubble); color: #fff; padding: 10px 16px;
+  border-radius: 16px 16px 4px 16px; max-width: 70%; line-height: 1.5; font-size: 14px;
+}
+
+/* Thought */
+.msg.thought .bubble {
+  color: var(--thought-text); font-size: 13px; font-style: italic;
+  padding: 6px 0; display: flex; align-items: flex-start; gap: 6px; line-height: 1.5;
+}
+.msg.thought .dot { color: var(--primary); font-style: normal; }
+
+/* Action */
+.msg.action .bubble {
+  background: var(--action-bg); color: var(--action-text); font-size: 13px;
+  font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+  padding: 8px 14px; border-radius: 8px; display: inline-flex; align-items: center; gap: 8px;
+  max-width: 90%;
+}
+.msg.action .tool-icon { background: var(--primary); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-family: inherit; white-space: nowrap; }
+
+/* Observation */
+.msg.observation details { cursor: pointer; }
+.msg.observation summary {
+  color: var(--obs-text); font-size: 13px; padding: 8px 14px; background: var(--obs-bg);
+  border-radius: 8px; list-style: none; display: flex; align-items: center; gap: 6px;
+}
+.msg.observation summary::-webkit-details-marker { display: none; }
+.msg.observation summary::before { content: "▸"; font-size: 10px; transition: transform 0.2s; display: inline-block; }
+.msg.observation details[open] summary::before { transform: rotate(90deg); }
+.msg.observation pre {
+  background: #f0faf5; padding: 10px 14px; border-radius: 0 0 8px 8px;
+  font-size: 12px; max-height: 200px; overflow-y: auto; white-space: pre-wrap;
+  color: var(--obs-text); margin: 0; font-family: "SF Mono", monospace;
+}
+
+/* Plan */
+.msg.plan {
+  background: var(--plan-bg); border: 1px solid var(--plan-border);
+  border-radius: var(--radius); padding: 18px 20px; margin: 12px 0;
+}
+.msg.plan .plan-content { font-size: 14px; line-height: 1.7; }
+.msg.plan .plan-content h1, .msg.plan .plan-content h2, .msg.plan .plan-content h3 { margin: 12px 0 6px; font-size: 15px; }
+.msg.plan .plan-content p { margin: 4px 0; }
+.msg.plan .plan-content ul, .msg.plan .plan-content ol { padding-left: 20px; margin: 6px 0; }
+.msg.plan .plan-content li { margin: 3px 0; }
+.msg.plan .plan-content code { background: rgba(0,0,0,0.05); padding: 2px 5px; border-radius: 4px; font-size: 13px; }
+.msg.plan .plan-content pre { background: rgba(0,0,0,0.03); padding: 10px 14px; border-radius: 8px; overflow-x: auto; font-size: 13px; margin: 8px 0; }
+.msg.plan .plan-content pre code { background: none; padding: 0; }
+.msg.plan .plan-content table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 13px; }
+.msg.plan .plan-content th, .msg.plan .plan-content td { border: 1px solid #e8d5a0; padding: 8px 12px; text-align: left; }
+.msg.plan .plan-content th { background: #fff3cd; font-weight: 600; }
+.msg.plan .plan-content tr:nth-child(even) { background: rgba(255,255,255,0.6); }
+.msg.plan .plan-content blockquote { border-left: 3px solid var(--plan-border); padding-left: 12px; color: #888; margin: 8px 0; }
+.msg.plan .plan-content strong { color: #333; }
+.msg.plan .plan-content hr { border: none; border-top: 1px solid #f0e0a0; margin: 12px 0; }
+.plan-actions { display: flex; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #f0e0a0; }
+.plan-actions button {
+  padding: 8px 20px; border-radius: 8px; cursor: pointer; border: none;
+  font-size: 14px; font-weight: 500; transition: all 0.15s;
+}
+.btn-confirm { background: var(--primary); color: #fff; }
+.btn-confirm:hover { opacity: 0.9; transform: translateY(-1px); }
+.btn-adjust { background: var(--surface); color: var(--text-secondary); border: 1px solid var(--border) !important; }
+.btn-adjust:hover { border-color: var(--primary) !important; color: var(--primary); }
+
+/* Done */
+.msg.done {
+  background: var(--done-bg); border: 1px solid var(--done-border);
+  border-radius: var(--radius); padding: 14px 18px; font-size: 15px; text-align: center; font-weight: 500;
+}
+
+/* Error */
+.msg.error {
+  color: var(--error-text); background: var(--error-bg);
+  padding: 10px 16px; border-radius: 8px; font-size: 14px;
+}
+
+/* Confirming */
+.msg.confirming {
+  color: #d97706; font-size: 13px; padding: 6px 0; display: flex; align-items: center; gap: 8px;
+}
+.msg.confirming .spinner {
+  width: 14px; height: 14px; border: 2px solid #fcd34d; border-top-color: #d97706;
+  border-radius: 50%; animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Input */
+#input-area { padding: 14px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; background: var(--surface); }
+#input-area input {
+  flex: 1; padding: 12px 16px; border: 2px solid var(--border); border-radius: 12px;
+  font-size: 14px; outline: none; background: var(--bg); transition: border-color 0.15s;
+}
+#input-area input:focus { border-color: var(--primary); background: var(--surface); }
+#input-area button {
+  padding: 12px 24px; background: var(--primary); color: #fff; border: none;
+  border-radius: 12px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s;
+}
+#input-area button:hover { opacity: 0.9; }
+#input-area button:disabled { background: #c7d2fe; cursor: not-allowed; }
+
+/* Tooltip status bar */
+#status {
+  padding: 4px 24px; font-size: 12px; color: var(--text-secondary);
+  display: flex; align-items: center; gap: 6px; min-height: 24px;
+}
+#status .dot { width: 7px; height: 7px; border-radius: 50%; }
+.dot.online { background: #22c55e; }
+.dot.offline { background: #d1d5db; }
+.dot.thinking { background: #f59e0b; animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+@media (max-width: 600px) {
+  #app { max-width: 100%; border-radius: 0; }
+  #messages { padding: 14px 16px; }
+  #input-area { padding: 10px 16px; }
+}
 </style>
 </head>
 <body>
 <div id="app">
   <div id="header">
-    <h1>🎯 周末活动规划助手</h1>
-    <button onclick="location.reload()">新对话</button>
+    <h1>周末活动规划助手</h1>
+    <div class="actions">
+      <button onclick="location.reload()">新对话</button>
+    </div>
   </div>
+  <div id="status"><span class="dot online"></span> 就绪</div>
   <div id="messages"></div>
   <div id="input-area">
-    <input type="text" id="userInput" placeholder="输入你想安排的活动...">
+    <input type="text" id="userInput" placeholder="输入你想安排的活动..." autofocus>
     <button id="sendBtn" onclick="sendMessage()">发送</button>
   </div>
 </div>
@@ -51,92 +205,174 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 let ws;
 let planningInProgress = false;
 
+marked.setOptions({ breaks: true, gfm: true });
+
 function connect() {
   ws = new WebSocket("ws://" + location.host + "/ws/chat");
   ws.onmessage = (event) => {
     const step = JSON.parse(event.data);
     render(step);
   };
-  ws.onclose = () => { planningInProgress = false; };
-  ws.onerror = () => { planningInProgress = false; };
+  ws.onclose = () => {
+    setStatus('offline', '连接断开');
+    planningInProgress = false;
+  };
+  ws.onerror = () => {
+    setStatus('offline', '连接异常');
+  };
+}
+
+function setStatus(state, text) {
+  const dot = document.querySelector('#status .dot');
+  dot.className = 'dot ' + state;
+  document.getElementById('status').innerHTML = '<span class="dot ' + state + '"></span> ' + text;
 }
 
 function sendMessage() {
-  const input = document.getElementById("userInput");
+  const input = document.getElementById('userInput');
   const text = input.value.trim();
   if (!text || planningInProgress) return;
 
   planningInProgress = true;
-  document.getElementById("sendBtn").disabled = true;
-  addMessage("user", text);
-  input.value = "";
+  document.getElementById('sendBtn').disabled = true;
+  setStatus('thinking', 'Agent 思考中...');
 
-  if (text.includes("确认") || text.includes("可以") || text.includes("好的") || text === "是") {
-    ws.send(JSON.stringify({ type: "confirm", content: text }));
-  } else {
-    ws.send(JSON.stringify({ content: text }));
-  }
+  addUserMessage(text);
+  input.value = '';
+  ws.send(JSON.stringify({ content: text }));
 }
 
 function render(step) {
-  const msgs = document.getElementById("messages");
+  const msgs = document.getElementById('messages');
   switch (step.type) {
-    case "THOUGHT":
-      addMessage("thought", "🧠 " + step.content); break;
-    case "ACTION":
-      addMessage("action", "🔧 " + step.tool + "(" + step.params + ")"); break;
-    case "OBSERVATION":
-      addMessage("observation", "👁️ " + formatJson(step.content)); break;
-    case "FINAL_PLAN":
+    case 'THOUGHT':
+      addThought(step.content); break;
+    case 'ACTION':
+      addAction(step.tool, step.params); break;
+    case 'OBSERVATION':
+      addObservation(step.content); break;
+    case 'FINAL_PLAN':
       addPlanCard(step.content); break;
-    case "CONFIRMING":
-      addMessage("confirming", "⏳ " + step.content); break;
-    case "DONE":
-      addMessage("done", step.content); planningInProgress = false;
-      document.getElementById("sendBtn").disabled = false; break;
-    case "ERROR":
-      addMessage("error", "❌ " + step.content);
-      planningInProgress = false;
-      document.getElementById("sendBtn").disabled = false; break;
+    case 'CONFIRMING':
+      addConfirming(step.content); break;
+    case 'DONE':
+      addDone(step.content); break;
+    case 'ERROR':
+      addError(step.content); break;
   }
   msgs.scrollTop = msgs.scrollHeight;
 }
 
-function addMessage(cls, text) {
-  const div = document.createElement("div");
-  div.className = "msg " + cls;
-  div.textContent = text;
-  document.getElementById("messages").appendChild(div);
+function addUserMessage(text) {
+  const div = document.createElement('div');
+  div.className = 'msg user';
+  div.innerHTML = '<div class="bubble">' + escapeHtml(text) + '</div>';
+  document.getElementById('messages').appendChild(div);
+  scrollDown();
+}
+
+function addThought(text) {
+  const div = document.createElement('div');
+  div.className = 'msg thought';
+  div.innerHTML = '<div class="bubble"><span class="dot">💭</span>' + escapeHtml(text) + '</div>';
+  document.getElementById('messages').appendChild(div);
+  scrollDown();
+}
+
+function addAction(tool, params) {
+  const div = document.createElement('div');
+  div.className = 'msg action';
+  const shortParams = params && params.length > 80 ? params.substring(0, 80) + '...' : params;
+  div.innerHTML = '<div class="bubble"><span class="tool-icon">' + escapeHtml(tool) + '</span>' + escapeHtml(shortParams || '') + '</div>';
+  document.getElementById('messages').appendChild(div);
+  scrollDown();
+}
+
+function addObservation(content) {
+  const div = document.createElement('div');
+  div.className = 'msg observation';
+  const formatted = formatJson(content);
+  const truncated = formatted.length > 300 ? formatted.substring(0, 300) + '\n...' : formatted;
+  div.innerHTML = '<details><summary>👁️ 查看结果</summary><pre>' + escapeHtml(truncated) + '</pre></details>';
+  document.getElementById('messages').appendChild(div);
+  scrollDown();
 }
 
 function addPlanCard(content) {
-  const div = document.createElement("div");
-  div.className = "msg plan";
-  div.innerHTML = '<h3>📋 方案</h3><pre style="white-space:pre-wrap;font-family:inherit;margin-bottom:8px">' + content + '</pre>' +
-    '<div class="actions"><button class="btn-confirm" onclick="confirmPlan()">确认方案</button>' +
-    '<button class="btn-adjust" onclick="adjustPlan()">调整方案</button></div>';
-  document.getElementById("messages").appendChild(div);
+  const div = document.createElement('div');
+  div.className = 'msg plan';
+  const html = marked.parse(content);
+  div.innerHTML = '<div class="plan-content">' + html + '</div>' +
+    '<div class="plan-actions">' +
+    '<button class="btn-confirm" onclick="confirmPlan()">✓ 确认方案</button>' +
+    '<button class="btn-adjust" onclick="adjustPlan()">↩ 调整方案</button>' +
+    '</div>';
+  document.getElementById('messages').appendChild(div);
   planningInProgress = false;
-  document.getElementById("sendBtn").disabled = false;
+  document.getElementById('sendBtn').disabled = false;
+  setStatus('online', '就绪 — 请确认或调整方案');
+  scrollDown();
+}
+
+function addConfirming(text) {
+  const div = document.createElement('div');
+  div.className = 'msg confirming';
+  div.innerHTML = '<span class="spinner"></span>' + escapeHtml(text);
+  document.getElementById('messages').appendChild(div);
+  scrollDown();
+}
+
+function addDone(text) {
+  const div = document.createElement('div');
+  div.className = 'msg done';
+  div.textContent = text;
+  document.getElementById('messages').appendChild(div);
+  planningInProgress = false;
+  document.getElementById('sendBtn').disabled = false;
+  setStatus('online', '就绪');
+  scrollDown();
+}
+
+function addError(text) {
+  const div = document.createElement('div');
+  div.className = 'msg error';
+  div.textContent = '❌ ' + text;
+  document.getElementById('messages').appendChild(div);
+  planningInProgress = false;
+  document.getElementById('sendBtn').disabled = false;
+  setStatus('online', '就绪');
+  scrollDown();
 }
 
 function confirmPlan() {
-  ws.send(JSON.stringify({ type: "confirm", content: "确认执行此方案" }));
+  ws.send(JSON.stringify({ type: 'confirm', content: '确认执行此方案' }));
   planningInProgress = true;
-  document.getElementById("sendBtn").disabled = true;
+  document.getElementById('sendBtn').disabled = true;
+  setStatus('thinking', '执行中...');
 }
 
 function adjustPlan() {
-  document.getElementById("userInput").value = "请调整方案：";
-  document.getElementById("userInput").focus();
+  document.getElementById('userInput').value = '请调整方案：';
+  document.getElementById('userInput').focus();
+}
+
+function scrollDown() {
+  const msgs = document.getElementById('messages');
+  msgs.scrollTop = msgs.scrollHeight;
 }
 
 function formatJson(str) {
   try { return JSON.stringify(JSON.parse(str), null, 2); } catch(e) { return str; }
 }
 
-document.getElementById("userInput").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") sendMessage();
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+document.getElementById('userInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendMessage();
 });
 
 connect();

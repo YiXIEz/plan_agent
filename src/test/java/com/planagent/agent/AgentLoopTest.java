@@ -1,9 +1,11 @@
 package com.planagent.agent;
 
+import com.planagent.amap.AmapClient;
 import com.planagent.mock.MockDataStore;
 import com.planagent.tools.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.web.client.RestClient;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -13,12 +15,13 @@ class AgentLoopTest {
     @BeforeEach
     void setUp() {
         var store = new MockDataStore();
+        var amapClient = new AmapClient("", RestClient.builder());
         registry = new ToolRegistry();
-        new ActivitySearchTool(registry, store);
-        new RestaurantSearchTool(registry, store);
-        new WeatherTool(registry, store);
-        new RouteTool(registry, store);
-        new RatingFilterTool(registry, store);
+        new ActivitySearchTool(registry, store, amapClient);
+        new RestaurantSearchTool(registry, store, amapClient);
+        new WeatherTool(registry, store, amapClient);
+        new RouteTool(registry, store, amapClient);
+        new RatingFilterTool(registry, store, amapClient);
         new QueueCheckTool(registry, store);
         new ReservationTool(registry, store);
         new OrderTool(registry, store);

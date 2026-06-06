@@ -1,5 +1,7 @@
 package com.planagent.model;
 
+import dev.langchain4j.data.message.ChatMessage;
+
 import java.util.*;
 
 public class SessionContext {
@@ -15,6 +17,7 @@ public class SessionContext {
     public Map<String, OrderResult> executedOrders = new LinkedHashMap<>();
     public Map<String, Reservation> reservations = new LinkedHashMap<>();
     public String startTime = "14:00";
+    public List<ChatMessage> conversationHistory = new ArrayList<>();
 
     public SessionContext(String sessionId) {
         this.sessionId = sessionId;
