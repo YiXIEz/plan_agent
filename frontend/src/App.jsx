@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Bubble, Sender, Conversations, ThoughtChain, XProvider } from '@ant-design/x';
-import { Button, Tag, Space, Typography, theme, Switch } from 'antd';
+import { Bubble, Sender, Conversations, XProvider } from '@ant-design/x';
+import { Button, Space, Typography, theme, Switch } from 'antd';
 import { RobotOutlined, PlusOutlined } from '@ant-design/icons';
 import { marked } from 'marked';
 import useChat from './useChat';
@@ -58,23 +58,23 @@ export default function App() {
 
         {/* Main */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          <div style={{ height: 36, borderBottom: `1px solid ${token.colorBorderSecondary}`,
-            display: 'flex', alignItems: 'center', padding: '0 24px', fontSize: 12, color: token.colorTextTertiary }}>
-            {loading ? 'Agent 思考中...' : '就绪'}
-          </div>
+          {loading && (
+            <div style={{ padding: '10px 24px', background: token.colorInfoBg, borderBottom: `1px solid ${token.colorInfoBorder}`,
+              display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: token.colorInfoText }}>
+              <span style={{ animation: 'pulse 1.5s infinite', fontSize: 16 }}>🤔</span> Agent 正在分析规划中，请稍候...
+            </div>
+          )}
 
           <div style={{ flex: 1, overflow: 'auto', padding: '16px 24px' }}>
-            {messages.length === 0 && (
+            {messages.length === 0 && !loading && (
               <div style={{ textAlign: 'center', paddingTop: 80, color: token.colorTextQuaternary }}>
                 <RobotOutlined style={{ fontSize: 48, marginBottom: 16 }} />
                 <div style={{ fontSize: 15 }}>输入你想安排的活动，AI 助手为你规划完整方案</div>
               </div>
             )}
             <Bubble.List
-              items={messages.map(msg => {
+              items={messages.filter(m => m.type !== 'round').map(msg => {
                 if (msg.role === 'user') return { key: msg.id, role: 'user', content: msg.content };
-                if (msg.type === 'round') return { key: msg.id, role: 'ai', content: '',
-                  contentRender: () => <AgentRound items={msg.children} token={token} /> };
                 if (msg.type === 'plan') return { key: msg.id, role: 'ai', content: '',
                   contentRender: () => <PlanCard content={msg.content} token={token} /> };
                 if (msg.type === 'done') return { key: msg.id, role: 'ai', content: msg.content };
@@ -95,31 +95,6 @@ export default function App() {
       </div>
     </XProvider>
   );
-}
-
-function AgentRound({ items, token }) {
-  const chainItems = items.map((item, i) => {
-    if (item.type === 'thought') return {
-      key: i, title: <Text type="secondary" style={{ fontSize: 12 }}>思考</Text>,
-      icon: <span style={{ fontSize: 14 }}>💡</span>,
-      description: <Text type="secondary" style={{ fontStyle: 'italic' }}>{item.content}</Text>,
-    };
-    if (item.type === 'action') return {
-      key: i, title: <Text type="secondary" style={{ fontSize: 12 }}>调用工具</Text>,
-      icon: <span style={{ fontSize: 14 }}>🔧</span>,
-      description: <Space size={4}><Tag color="blue" style={{ fontFamily: 'monospace' }}>{item.tool}</Tag>
-        {item.params && <Text type="secondary" style={{ fontFamily: 'monospace', fontSize: 12 }}>{item.params?.slice(0, 80)}</Text>}</Space>,
-    };
-    if (item.type === 'observation') return {
-      key: i, title: <Text type="secondary" style={{ fontSize: 12 }}>返回结果</Text>,
-      icon: <span style={{ fontSize: 14 }}>👁</span>,
-      description: <pre style={{ background: token.colorSuccessBg, border: `1px solid ${token.colorSuccessBorder}`,
-        borderRadius: 6, padding: '8px 12px', maxHeight: 160, overflow: 'auto',
-        fontFamily: 'monospace', fontSize: 12, color: '#389e0d', whiteSpace: 'pre-wrap', margin: 0 }}>{formatJson(item.content)}</pre>,
-    };
-    return { key: i, title: '?', description: '' };
-  });
-  return <div style={{ marginBottom: 8 }}><ThoughtChain items={chainItems} /></div>;
 }
 
 function PlanCard({ content, token }) {
