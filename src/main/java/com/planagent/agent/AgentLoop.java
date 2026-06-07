@@ -31,20 +31,26 @@ public class AgentLoop {
     private final ReplanningHandler replanningHandler;
 
     private static final String SYSTEM_PROMPT = """
-        你是一个本地短时活动规划助手。用户想在下午安排4-6小时的休闲活动。
+        你是一个本地短时活动规划助手。用户在下午安排4-6小时的休闲活动。
 
         你需要:
         1. 理解用户场景(家庭/朋友、人数、偏好、年龄等)
         2. 按顺序规划: 查天气 → 找活动 → 找餐厅 → 查排队/路线 → 汇总方案
-        3. 生成最终方案给用户确认，方案需包含时间线、活动详情、餐厅选项、路线建议
-        4. 用户确认后，执行下单/预订/通知等操作
+        3. 生成最终方案，方案需包含时间线、活动详情、餐厅选项、路线建议
 
         规则:
         - 每次只调用一个工具，等待结果后再决定下一步
         - 家庭场景优先考虑: 亲子友好、安全、适合孩子年龄、有轻食选项
         - 距离控制在5km以内，除非特别说明
         - 最终方案必须包含时间线和备选选项
-        - 输出最终方案时，不要说"需要我确认"，直接展示完整计划
+        - 输出最终方案时，直接展示完整计划
+
+        重要规则:
+        - 如果用户没有明确指定城市或区域，必须先追问，不能自己假设地点
+        - 只能用工具返回的真实数据来规划，不能凭空编造地点名称、距离、评分
+        - 如果工具返回的数据不够好或不相关，如实告知用户并请求更具体的需求
+        - 不要编造不存在的地点、餐厅名或活动名
+        - 信息不足时先问清楚再规划，不要猜测
         """;
 
     public AgentLoop(@Qualifier("primaryModel") ChatLanguageModel primaryModel,
@@ -102,8 +108,10 @@ public class AgentLoop {
                             messages.add(ToolExecutionResultMessage.from(req, result));
                         }
                     } else {
+                        String fullText = aiMessage.text();
                         messages.add(aiMessage);
-                        sink.next(AgentStep.finalPlan(aiMessage.text()));
+                        streamText(sink, fullText);
+                        sink.next(AgentStep.finalPlan(fullText));
                         ctx.conversationHistory = new ArrayList<>(messages);
                         sink.complete();
                         return;
@@ -127,6 +135,24 @@ public class AgentLoop {
             sink.next(AgentStep.error("超过最大规划轮数"));
             sink.complete();
         });
+    }
+
+    private void streamText(reactor.core.publisher.FluxSink<AgentStep> sink, String text) {
+        if (text == null || text.isEmpty()) return;
+        int i = 0;
+        while (i < text.length()) {
+            int end = Math.min(i + 4, text.length());
+            while (end < text.length() && end - i < 8 && !isBreakChar(text.charAt(end))) { end++; }
+            if (end - i > 8) end = i + 4;
+            sink.next(AgentStep.token(text.substring(i, end)));
+            i = end;
+            try { Thread.sleep(50); } catch (InterruptedException e) { Thread.currentThread().interrupt(); break; }
+        }
+    }
+
+    private boolean isBreakChar(char c) {
+        return c == '。' || c == '，' || c == '、' || c == '！' || c == '？' || c == '\n'
+            || c == '.' || c == ',' || c == '!' || c == '?' || c == ' ' || c == '：' || c == '；';
     }
 
     public Flux<AgentStep> confirm(SessionContext session, String userMessage) {
