@@ -6,3 +6,4 @@ target/
 *.class
 x/
 data/
+node_modules/

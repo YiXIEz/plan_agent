@@ -1,0 +1,184 @@
+@import "tailwindcss";
+
+@plugin 'tailwindcss-animate';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: #0B0B0B;
+  --foreground: #FFFFFF;
+  --card: #1E1E1E;
+  --card-foreground: #FFFFFF;
+  --popover: #1A1A1A;
+  --popover-foreground: #FFFFFF;
+  --primary: #FFFFFF;
+  --primary-foreground: #0B0B0B;
+  --secondary: rgba(255,255,255,0.06);
+  --secondary-foreground: rgba(255,255,255,0.85);
+  --muted: rgba(255,255,255,0.06);
+  --muted-foreground: rgba(255,255,255,0.45);
+  --accent: rgba(255,255,255,0.08);
+  --accent-foreground: rgba(255,255,255,0.85);
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --border: rgba(255,255,255,0.06);
+  --input: #1E1E1E;
+  --ring: rgba(255,255,255,0.25);
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --shadow-card: 0 2px 8px rgba(0,0,0,0.2);
+  --shadow-input: 0 8px 30px rgba(0,0,0,0.35);
+  --sidebar-width: 260px;
+  --sidebar-width-mobile: 18rem;
+  --sidebar-width-icon: 3rem;
+}
+
+.dark {
+  --background: #0B0B0B;
+  --foreground: #FFFFFF;
+  --card: #1E1E1E;
+  --card-foreground: #FFFFFF;
+  --popover: #1A1A1A;
+  --popover-foreground: #FFFFFF;
+  --primary: #FFFFFF;
+  --primary-foreground: #0B0B0B;
+  --secondary: rgba(255,255,255,0.06);
+  --secondary-foreground: rgba(255,255,255,0.85);
+  --muted: rgba(255,255,255,0.06);
+  --muted-foreground: rgba(255,255,255,0.45);
+  --accent: rgba(255,255,255,0.08);
+  --accent-foreground: rgba(255,255,255,0.85);
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --border: rgba(255,255,255,0.06);
+  --input: #1E1E1E;
+  --ring: rgba(255,255,255,0.25);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: #0B0B0B;
+  --color-sidebar-foreground: rgba(255,255,255,0.85);
+  --color-sidebar-accent: rgba(255,255,255,0.08);
+  --color-sidebar-accent-foreground: rgba(255,255,255,0.85);
+  --color-sidebar-border: rgba(255,255,255,0.06);
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, monospace;
+  --shadow-card: var(--shadow-card);
+  --shadow-input: var(--shadow-input);
+  --radius-sm: var(--radius-sm);
+  --radius: var(--radius);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-feature-settings: "ss01", "ss02", "cv01", "cv03";
+  letter-spacing: -0.01em;
+}
+
+/* Typography scale */
+h1 {
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--foreground);
+}
+
+/* Sidebar */
+.sidebar-wrapper {
+  background: #0B0B0B;
+  border-right: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Transitions */
+* {
+  transition-duration: 180ms;
+  transition-timing-function: ease-out;
+}
+
+input::placeholder, textarea::placeholder {
+  font-size: 16px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.35);
+}
+
+/* 8pt grid spacing */
+.gap-4 { gap: 16px; }
+.gap-6 { gap: 24px; }
+.gap-8 { gap: 32px; }
+.gap-12 { gap: 48px; }
+.p-4 { padding: 16px; }
+.p-6 { padding: 24px; }
+.p-8 { padding: 32px; }
+
+@layer base {
+  * {
+    @apply border-border ring-0;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "ss01", "ss02", "cv01", "cv03", "cv05", "cv06", "cv07";
+  }
+}
+
+@layer utilities {
+  .flex-center {
+    @apply flex items-center justify-center;
+  }
+
+  .flex-between {
+    @apply flex items-center justify-between;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 180ms ease-out;
+}
+
+.animate-fade-up {
+  animation: fade-up 400ms ease-out;
+}

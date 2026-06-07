@@ -1,26 +1,28 @@
 # Plan Agent — 周末活动规划助手
 
-基于 Spring Boot + LangChain4j 的 AI 活动规划助手，使用 ReAct 循环通过 DeepSeek LLM 推理，调用高德地图真实 API 获取天气/地点/路线数据，自动生成完整的亲子下午活动方案。
+基于 Spring Boot + LangChain4j 的 AI 活动规划助手。ReAct 循环推理，高德地图真实 API，Vercel Chatbot 前端。
 
 ## 架构
 
 ```
-浏览器 (index.html) ──WebSocket──► ChatWebSocketHandler
-                                        │
-                                   ChatService (持久化)
-                                        │
-                                   AgentLoop (ReAct 循环)
-                                   /         \
-                            ToolRegistry    LLM (DeepSeek/Qwen)
-                           /    |    \
-                     AmapClient MockDataStore (Action tools)
+Vercel Chatbot (Next.js) ──WebSocket──► Spring Boot
+  frontend/                              │
+  ├─ app/(chat)/layout.tsx               ChatWebSocketHandler
+  ├─ hooks/use-websocket-chat.ts         │
+  └─ components/chat/               ChatService (H2 持久化)
+                                         │
+                                    AgentLoop (ReAct 循环)
+                                    /         \
+                             ToolRegistry    LLM (DeepSeek v4-pro)
+                            /    |    \
+                      AmapClient MockDataStore
 ```
 
 ## 前置条件
 
 - Java 17+
 - Maven 3.9+
-- MySQL 8.0+
+- Node.js 18+
 - DeepSeek API Key（[获取](https://platform.deepseek.com/api_keys)）
 - 高德地图 Web服务 API Key（[获取](https://lbs.amap.com/)）
 
@@ -28,84 +30,110 @@
 
 ```bash
 # 1. 克隆项目
-git clone git@gitee.com:YIXie777/plan-agent.git
+git clone git@github.com:MSSHHH/plan_agent.git
 cd plan-agent
 
-# 2. 创建数据库
-mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS plan_agent DEFAULT CHARACTER SET utf8mb4"
-
-# 3. 设置环境变量
+# 2. 设置环境变量
 export DEEPSEEK_API_KEY=你的DeepSeek密钥
 export AMAP_API_KEY=你的高德地图密钥
-export MYSQL_PASSWORD=你的MySQL密码
 
-# 4. 编译运行
+# 3. 启动后端（Spring Boot :8080）
 mvn clean package -DskipTests
 java -jar target/plan-agent-1.0.0-SNAPSHOT.jar
 
-# 5. 打开浏览器
-# http://localhost:8080
-```
+# 4. 启动前端（另一个终端，Next.js :3001）
+cd frontend
+npm install
+npm run dev
 
-首次启动后表会自动创建（通过 `schema.sql`）。
+# 5. 打开浏览器
+# http://localhost:3001
+```
 
 ## 配置说明
 
-所有配置在 `src/main/resources/application.yml`，支持环境变量覆盖：
+核心配置在 `src/main/resources/application.yml`：
 
 | 环境变量 | 默认值 | 说明 |
 |----------|--------|------|
-| `DEEPSEEK_API_KEY` | - | DeepSeek API 密钥 |
-| `AMAP_API_KEY` | - | 高德地图 Web 服务 API 密钥 |
-| `MYSQL_HOST` | localhost | MySQL 地址 |
-| `MYSQL_PORT` | 3306 | MySQL 端口 |
-| `MYSQL_USER` | root | MySQL 用户名 |
-| `MYSQL_PASSWORD` | 10011001 | MySQL 密码 |
+| `DEEPSEEK_API_KEY` | - | DeepSeek API 密钥（必填） |
+| `AMAP_API_KEY` | - | 高德地图密钥，不填则回退 Mock 数据 |
+| `QWEN_API_KEY` | - | Qwen 备用模型密钥（可选） |
 
-无 `AMAP_API_KEY` 时自动回退到 Mock 数据。
+数据库使用 **H2 嵌入式文件数据库**，零配置，数据自动存 `./data/conversation.mv.db`，表自动创建。H2 控制台：http://localhost:8080/h2-console（URL: `jdbc:h2:file:./data/conversation`，用户名 `sa`，密码空）。
 
 ## 工具列表
 
-**搜索工具（Amap 真实 API）：**
-
 | 工具 | 功能 | 数据来源 |
 |------|------|----------|
-| `check_weather` | 查询指定区域天气 | 高德天气 API |
-| `search_activities` | 搜索附近亲子活动 | 高德 POI 搜索 |
-| `search_restaurants` | 搜索附近餐厅 | 高德 POI 搜索 |
-| `plan_route` | 规划两点间路线 | 高德路径规划 API |
-| `filter_by_rating` | 按评分筛选商户 | 高德 POI 详情 API |
-
-**行动工具（Mock 数据）：**
-
-| 工具 | 功能 |
-|------|------|
-| `check_queue` | 查询餐厅排队情况 |
-| `make_reservation` | 预订餐厅 |
-| `place_order` | 下单（门票/蛋糕/鲜花） |
-| `pay` | 支付 |
-| `send_notification` | 发送通知 |
+| `check_weather` | 查询天气 | 高德 API |
+| `search_activities` | 搜索亲子活动 | 高德 POI |
+| `search_restaurants` | 搜索餐厅 | 高德 POI |
+| `plan_route` | 规划路线 | 高德路径 |
+| `filter_by_rating` | 评分筛选 | 高德详情 |
+| `check_queue` | 排队查询 | Mock |
+| `make_reservation` | 预订 | Mock |
+| `place_order` | 下单 | Mock |
+| `pay` | 支付 | Mock |
+| `send_notification` | 通知 | Mock |
 
 ## 项目结构
 
 ```
 src/main/java/com/planagent/
-├── agent/AgentLoop.java          # ReAct 循环核心
-├── amap/AmapClient.java          # 高德地图 API 客户端
-├── config/LLMConfig.java         # LLM 配置（DeepSeek + Qwen 备用）
-├── controller/ChatWebSocketHandler.java  # WebSocket 端点
-├── mock/MockDataStore.java       # Mock 数据存储
-├── model/                        # 数据模型
-├── repository/MessageRepository.java  # MySQL 持久化
-├── service/ChatService.java      # 对话服务（持久化封装）
-└── tools/                        # 10 个工具实现
+├── agent/AgentLoop.java              # ReAct 循环（流式输出）
+├── amap/AmapClient.java              # 高德地图 API
+├── config/LLMConfig.java             # LLM 配置
+├── controller/
+│   ├── ChatWebSocketHandler.java     # WebSocket 端点
+│   └── SessionController.java        # REST API（历史对话）
+├── mock/MockDataStore.java           # Mock 数据
+├── model/                            # 数据模型
+├── repository/MessageRepository.java # H2 持久化
+├── service/ChatService.java          # 对话服务
+└── tools/                            # 10 个工具
+
+frontend/                             # Vercel Chatbot 前端
+├── app/(chat)/                       # 聊天页面
+├── components/chat/                  # UI 组件
+│   ├── app-sidebar.tsx               # 侧边栏
+│   ├── messages.tsx                  # 消息列表
+│   ├── multimodal-input.tsx          # 输入框
+│   ├── greeting.tsx                  # Hero 标题
+│   └── suggested-actions.tsx         # 推荐问题
+├── hooks/
+│   ├── use-websocket-chat.ts         # WebSocket 通信
+│   └── use-active-chat.tsx           # 聊天状态管理
+└── app/(chat)/api/history/route.ts   # 历史对话 API 代理
 ```
 
 ## 开发命令
 
 ```bash
-mvn compile            # 编译
-mvn test               # 运行测试（27 个）
-mvn test -Dtest=AmapClientTest  # 运行单个测试类
-mvn clean package -DskipTests   # 打包
+# 后端
+mvn compile
+mvn test              # 27 个测试
+mvn clean package -DskipTests
+
+# 前端
+cd frontend
+npm run dev           # 开发模式（热更新，:3001）
+npm run build         # 生产构建
+```
+
+## WebSocket 协议
+
+前端通过 `ws://localhost:8080/ws/chat` 与后端通信：
+
+```json
+// 发送
+{ "content": "用户的输入文本" }
+
+// 接收（流式）
+{ "type": "TOKEN", "content": "逐" }
+{ "type": "TOKEN", "content": "段" }
+{ "type": "TOKEN", "content": "输" }
+{ "type": "FINAL_PLAN", "content": "完整方案 Markdown..." }
+{ "type": "DONE", "content": "执行完成" }
+{ "type": "ERROR", "content": "错误信息" }
 ```
